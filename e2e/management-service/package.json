@@ -1,0 +1,9 @@
+{
+  "name": "management-service-mock",
+  "description": "simple mock for management service",
+  "version": "0.0.1",
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {}
+}

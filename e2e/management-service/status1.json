@@ -1,0 +1,212 @@
+{
+  "Status": "Some status string",
+  "Timestamp": "2020-06-17T15:52:32.977Z",
+  "Error": "Some error string",
+  "Payload": {
+    "CurrentRefTime": 1592409043,
+    "CurrentRefBlock": 3454,
+    "CurrentCommittee": [
+      {
+        "EthAddress": "8a670ddc1910c27278ab7db2a148a0dccc6bf0f5",
+        "Weight": 40000,
+        "Name": "Guardian3"
+      },
+      {
+        "EthAddress": "94fda04016784d0348ec2ece7a9b24e3313885f0",
+        "Weight": 30000,
+        "Name": "Guardian1"
+      }
+    ],
+    "CurrentCandidates": [
+      {
+        "EthAddress": "cb6642be414696f77336dae06fed3775f08de0ea",
+        "IsStandby": true,
+        "Name": "Guardian4"
+      },
+      {
+        "EthAddress": "51baa09f2f7dfc7a0f65886b68720958d389cac7",
+        "IsStandby": false,
+        "Name": "Guardian2"
+      },
+      {
+        "EthAddress": "98b4d71c78789637364a70f696227ec89e35626c",
+        "IsStandby": false,
+        "Name": "Guardian0"
+      }
+    ],
+    "CurrentImageVersions": {
+      "main": {
+        "management-service": "v1.0.0",
+        "node": "v1.0.0"
+      }
+    },
+    "CurrentImageVersionsUpdater": {
+      "main": {
+        "management-service": {
+          "LastPollTime": 1592409043,
+          "PendingVersion": "",
+          "PendingVersionTime": 0
+        },
+        "node": {
+          "LastPollTime": 1592409043,
+          "PendingVersion": "",
+          "PendingVersionTime": 0
+        }
+      }
+    },
+    "CurrentVirtualChains": {
+      "42": {
+        "Expiration": 1602409043,
+        "GenesisRefTime": 1592409043,
+        "IdentityType": 0,
+        "RolloutGroup": "main",
+        "Tier": "defaultTier"
+      },
+      "43": {
+        "Expiration": 1602409043,
+        "GenesisRefTime": 1592409043,
+        "IdentityType": 0,
+        "RolloutGroup": "main",
+        "Tier": "defaultTier"
+      }
+    },
+    "CurrentTopology": [
+      {
+        "EthAddress": "8a670ddc1910c27278ab7db2a148a0dccc6bf0f5",
+        "OrbsAddress": "7c2300d32ebf4a6ae9edf95f4f57ab5a07488c2e",
+        "Ip": "138.103.13.220",
+        "Port": 0
+      },
+      {
+        "EthAddress": "94fda04016784d0348ec2ece7a9b24e3313885f0",
+        "OrbsAddress": "945dc264e11c09f8a518da6ce1bea493e0055b16",
+        "Ip": "225.110.150.90",
+        "Port": 0
+      },
+      {
+        "EthAddress": "cb6642be414696f77336dae06fed3775f08de0ea",
+        "OrbsAddress": "33546759bdcfb5c753a4102b86b3e73e714d5213",
+        "Ip": "203.102.66.190",
+        "Port": 0
+      }
+    ],
+    "Guardians": {
+      "98b4d71c78789637364a70f696227ec89e35626c": {
+        "EthAddress": "98b4d71c78789637364a70f696227ec89e35626c",
+        "OrbsAddress": "b1985d8a332bfc903fd437489ea933792fbfa500",
+        "Ip": "41.206.134.10",
+        "EffectiveStake": 10000,
+        "ElectionsStatus": {
+          "LastUpdateTime": 1592409043,
+          "ReadyToSync": false,
+          "ReadyForCommittee": false,
+          "TimeToStale": 5000
+        },
+        "Name": "Guardian0",
+        "Website": "Guardian0-website",
+        "Contact": "Guardian0-contact"
+      },
+      "94fda04016784d0348ec2ece7a9b24e3313885f0": {
+        "EthAddress": "94fda04016784d0348ec2ece7a9b24e3313885f0",
+        "OrbsAddress": "945dc264e11c09f8a518da6ce1bea493e0055b16",
+        "Ip": "225.110.150.90",
+        "EffectiveStake": 20000,
+        "ElectionsStatus": {
+          "LastUpdateTime": 1592409043,
+          "ReadyToSync": true,
+          "ReadyForCommittee": true,
+          "TimeToStale": 604800
+        },
+        "Name": "Guardian1",
+        "Website": "Guardian1-website",
+        "Contact": "Guardian1-contact"
+      },
+      "51baa09f2f7dfc7a0f65886b68720958d389cac7": {
+        "EthAddress": "51baa09f2f7dfc7a0f65886b68720958d389cac7",
+        "OrbsAddress": "174dc3b45bdbbc32aa0b95e64d0247ce99b08f69",
+        "Ip": "81.186.160.159",
+        "EffectiveStake": 30000,
+        "ElectionsStatus": {
+          "LastUpdateTime": 1592409043,
+          "ReadyToSync": false,
+          "ReadyForCommittee": false,
+          "TimeToStale": 86400
+        },
+        "Name": "Guardian2",
+        "Website": "Guardian2-website",
+        "Contact": "Guardian2-contact"
+      },
+      "8a670ddc1910c27278ab7db2a148a0dccc6bf0f5": {
+        "EthAddress": "8a670ddc1910c27278ab7db2a148a0dccc6bf0f5",
+        "OrbsAddress": "7c2300d32ebf4a6ae9edf95f4f57ab5a07488c2e",
+        "Ip": "138.103.13.220",
+        "EffectiveStake": 40000,
+        "ElectionsStatus": {
+          "LastUpdateTime": 1592409043,
+          "ReadyToSync": true,
+          "ReadyForCommittee": true,
+          "TimeToStale": 604800
+        },
+        "Name": "Guardian3",
+        "Website": "Guardian3-website",
+        "Contact": "Guardian3-contact"
+      },
+      "cb6642be414696f77336dae06fed3775f08de0ea": {
+        "EthAddress": "cb6642be414696f77336dae06fed3775f08de0ea",
+        "OrbsAddress": "33546759bdcfb5c753a4102b86b3e73e714d5213",
+        "Ip": "203.102.66.190",
+        "EffectiveStake": 50000,
+        "ElectionsStatus": {
+          "LastUpdateTime": 1592409043,
+          "ReadyToSync": true,
+          "ReadyForCommittee": false,
+          "TimeToStale": 0
+        },
+        "Name": "Guardian4",
+        "Website": "Guardian4-website",
+        "Contact": "Guardian4-contact"
+      }
+    },
+    "ProtocolVersionEvents": {
+      "main": [
+        {
+          "RefTime": 1592409043,
+          "Data": {
+            "Version": 1
+          }
+        },
+        {
+          "RefTime": 1592409043,
+          "Data": {
+            "Version": 19
+          }
+        }
+      ],
+      "canary": [
+        {
+          "RefTime": 1592409043,
+          "Data": {
+            "Version": 1
+          }
+        },
+        {
+          "RefTime": 1592409043,
+          "Data": {
+            "Version": 20
+          }
+        }
+      ]
+    },
+    "Config": {
+      "Port": 8080,
+      "DockerNamespace": "orbsnetwork",
+      "DockerHubPollIntervalSeconds": 1,
+      "RegularRolloutWindowSeconds": 2,
+      "HotfixRolloutWindowSeconds": 2,
+      "EthereumPollIntervalSeconds": 1,
+      "FinalityBufferBlocks": 10,
+      "FirstBlock": 0,
+      "Verbose": true
+    }
+  }
+}

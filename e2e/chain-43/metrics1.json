@@ -1,0 +1,649 @@
+{
+  "BlockStorage": {
+    "FileSystemSize": {
+      "Type": "Bytes",
+      "Value": 876720
+    },
+    "InOrderBlock": {
+      "BlockHeight": 4618292,
+      "BlockTime": {
+        "Type": "Nanoseconds",
+        "Value": 1592420271605523631
+      }
+    },
+    "LastCommit": {
+      "Type": "Nanoseconds",
+      "Value": 1596122692787593000
+    },
+    "LastCommitted": {
+      "BlockHeight": 4618292,
+      "BlockTime": {
+        "Type": "Nanoseconds",
+        "Value": 1592420271605523631
+      }
+    },
+    "TopBlock": {
+      "BlockHeight": 4618292,
+      "BlockTime": {
+        "Type": "Nanoseconds",
+        "Value": 1592420271605523631
+      }
+    }
+  },
+  "BlockSync": {
+    "CollectingAvailabilityResponsesState": {
+      "BroadcastSendFailure": 0,
+      "BroadcastSendSuccess": 9,
+      "Duration": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 486.539264,
+          "P50": 503.316479,
+          "P95": 520.093695,
+          "P99": 520.093695,
+          "Max": 520.093695,
+          "Avg": 498.65614222222223,
+          "Samples": 9
+        }
+      }
+    },
+    "FinishedCollectingAvailabilityResponsesState": {
+      "Duration": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 0.005376,
+          "P50": 0.024575,
+          "P95": 0.196607,
+          "P99": 0.196607,
+          "Max": 0.196607,
+          "Avg": 0.042908444444444443,
+          "Samples": 9
+        }
+      },
+      "FinishedWithNoResponses": 2,
+      "FinishedWithSomeResponses": 7
+    },
+    "IdleState": {
+      "Duration": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 536.870912,
+          "P50": 1040.187391,
+          "P95": 2415.919103,
+          "P99": 3087.007743,
+          "Max": 3087.007743,
+          "Avg": 1128.4501370434782,
+          "Samples": 23
+        }
+      },
+      "ResetBackToIdle": 22,
+      "StartedBlockSync": 1
+    },
+    "ProcessingBlocksState": {
+      "BlocksReceived": {
+        "RatePerSecond": 18.98722226790029
+      },
+      "CommittedBlocks": 503,
+      "Duration": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 11.010048,
+          "P50": 704.643071,
+          "P95": 838.860799,
+          "P99": 838.860799,
+          "Max": 838.860799,
+          "Avg": 519.1574674285714,
+          "Samples": 7
+        }
+      },
+      "FailedToCommitBlocks": 0,
+      "FailedToValidateBlocks": 0,
+      "LastCommitted": {
+        "Type": "Nanoseconds",
+        "Value": 1596122669355794000
+      }
+    },
+    "StateTransitions": 55,
+    "WaitingForBlocksState": {
+      "Duration": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 2.031616,
+          "P50": 13.107199,
+          "P95": 17.825791,
+          "P99": 17.825791,
+          "Max": 17.825791,
+          "Avg": 11.098989714285715,
+          "Samples": 7
+        }
+      },
+      "ReceivedBlocksFromByzantineSource": 0,
+      "ReceivedBlocksFromExpectedSource": 7,
+      "TimedOutWithoutReceivingBlocks": 0
+    }
+  },
+  "ConsensusAlgo": {
+    "LeanHelix": {
+      "CurrentElection": 1,
+      "CurrentLeaderMemberId": "c056df",
+      "LastCommitted": {
+        "Type": "Nanoseconds",
+        "Value": 1596122692787612000
+      },
+      "TimeSinceLastCommit": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 536.870912,
+          "P50": 1040.187391,
+          "P95": 1040.187391,
+          "P99": 1040.187391,
+          "Max": 1040.187391,
+          "Avg": 980.2687634285714,
+          "Samples": 21
+        }
+      },
+      "TimeSinceLastElection": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 3892.314112,
+          "P50": 4026.531839,
+          "P95": 6979.321855,
+          "P99": 6979.321855,
+          "Max": 6979.321855,
+          "Avg": 5402.263552,
+          "Samples": 2
+        }
+      }
+    }
+  },
+  "ConsensusContext": {
+    "Committee": {
+      "Members": [
+        {
+          "Address:": "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "Weight": 1
+        },
+        {
+          "Address:": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "Weight": 1
+        },
+        {
+          "Address:": "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "Weight": 1
+        },
+        {
+          "Address:": "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "Weight": 1
+        }
+      ],
+      "PrevBlockReferenceTime": 1492983000,
+      "Size": 4
+    },
+    "CreateResultsBlockTime": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 0.237568,
+        "P50": 0.589823,
+        "P95": 0.950271,
+        "P99": 0.950271,
+        "Max": 0.950271,
+        "Avg": 0.605696,
+        "Samples": 8
+      }
+    },
+    "CreateTransactionsBlockTime": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 301.989888,
+        "P50": 1006.632959,
+        "P95": 1006.632959,
+        "P99": 1006.632959,
+        "Max": 1006.632959,
+        "Avg": 904.921088,
+        "Samples": 8
+      }
+    },
+    "ProcessTransactionsSetInCreateResultsBlock": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 0.229376,
+        "P50": 0.557055,
+        "P95": 0.851967,
+        "P99": 0.851967,
+        "Max": 0.851967,
+        "Avg": 0.569856,
+        "Samples": 8
+      }
+    },
+    "TransactionsEnteringBlock": {
+      "RatePerSecond": 0.9075598187970173
+    }
+  },
+  "Ethereum": {
+    "Node": {
+      "Endpoint": {
+        "Address": ""
+      },
+      "LastBlock": 0,
+      "Sync": {
+        "Status": "failed"
+      },
+      "TransactionReceipts": {
+        "Status": "failed"
+      }
+    },
+    "TimestampBlockFinder": {
+      "CacheHits": 0,
+      "LastBlockFound": {
+        "BlockNumber": 0,
+        "BlockTime": {
+          "Type": "Seconds",
+          "Value": 0
+        }
+      },
+      "LastBlockInEthereum": 0,
+      "StepsRequired": {
+        "RatePerSecond": 0
+      },
+      "TimeToFindBlock": {
+        "Duration": {
+          "Type": "Milliseconds",
+          "Value": {
+            "Min": 0,
+            "P50": 0,
+            "P95": 0,
+            "P99": 0,
+            "Max": 0,
+            "Avg": 0,
+            "Samples": 0
+          }
+        }
+      },
+      "TotalTimesCalled": 0
+    }
+  },
+  "Gossip": {
+    "IncomingConnection": {
+      "Active": 3,
+      "ListeningOnTCPPortErrors": 0,
+      "ListeningOnTCPPortSuccess": 3,
+      "TransportErrors": 0
+    },
+    "OutgoingConnection": {
+      "Active": 3,
+      "EnqueueErrors": {
+        "a32884": 0,
+        "c056df": 1,
+        "d27e2e": 0
+      },
+      "KeepaliveErrors": 0,
+      "MessageSize": {
+        "Type": "Bytes",
+        "Value": {
+          "Min": 0.000076,
+          "P50": 0.000335,
+          "P95": 0.000991,
+          "P99": 0.001151,
+          "Max": 0.001151,
+          "Avg": 0.00038019999999999997,
+          "Samples": 180
+        }
+      },
+      "QueueUsage": {
+        "a32884": {
+          "Type": "Percent",
+          "Value": 0
+        },
+        "c056df": {
+          "Type": "Percent",
+          "Value": 0
+        },
+        "d27e2e": {
+          "Type": "Percent",
+          "Value": 0
+        }
+      },
+      "SendError": {
+        "a32884": 0,
+        "c056df": 0,
+        "d27e2e": 0
+      },
+      "SendErrors": 0,
+      "SendQueueErrors": 1
+    },
+    "Topic": {
+      "BenchmarkConsensus": {
+        "DroppedMessages": 0,
+        "MessagesInQueue": 0,
+        "QueueSize": 20
+      },
+      "BlockSync": {
+        "DroppedMessages": 0,
+        "MessagesInQueue": 0,
+        "QueueSize": 10
+      },
+      "LeanHelixConsensus": {
+        "DroppedMessages": 0,
+        "MessagesInQueue": 0,
+        "QueueSize": 100
+      },
+      "TransactionRelay": {
+        "DroppedMessages": 0,
+        "Errors": 0,
+        "MessagesInQueue": 0,
+        "QueueSize": 200
+      }
+    }
+  },
+  "Management": {
+    "Committee": {
+      "Current": [
+        "d27e2e7398e2582f63d0800330010b3e58952ff6",
+        "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+        "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+        "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9"
+      ],
+      "RefTime": 0
+    },
+    "CommitteeEvents": 1,
+    "Data": {
+      "CachedStartRefTime": 0,
+      "CashedEndRefTime": 0,
+      "CurrentRefTime": 1492983000,
+      "GenesisRefTime": 0,
+      "LastSuccessfulUpdateTime": 1596122688,
+      "LastUpdateTime": 1596122688,
+      "PageEndRefTime": 1492983000,
+      "PageStartRefTime": 0
+    },
+    "Protocol": {
+      "Current": 1,
+      "RefTime": 0
+    },
+    "ProtocolEvents": 1,
+    "Subscription": {
+      "Current": "Active",
+      "RefTime": 1492982500
+    },
+    "SubscriptionEvents": 1,
+    "Topology": [
+      {
+        "Address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+        "Endpoint": "127.0.0.1",
+        "Port": 8190
+      },
+      {
+        "Address": "d27e2e7398e2582f63d0800330010b3e58952ff6",
+        "Endpoint": "127.0.0.1",
+        "Port": 8191
+      },
+      {
+        "Address": "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+        "Endpoint": "127.0.0.1",
+        "Port": 8192
+      },
+      {
+        "Address": "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+        "Endpoint": "127.0.0.1",
+        "Port": 8193
+      }
+    ]
+  },
+  "Node": {
+    "Address": "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9"
+  },
+  "OS": {
+    "Process": {
+      "CPU": {
+        "PerCent": 0
+      },
+      "Memory": {
+        "Type": "Bytes",
+        "Value": 0
+      }
+    }
+  },
+  "Processor": {
+    "Native": {
+      "Compiler": {
+        "BuildTime": {
+          "Type": "Milliseconds",
+          "Value": {
+            "Min": 54.525952,
+            "P50": 60.817407,
+            "P95": 71.303167,
+            "P99": 71.303167,
+            "Max": 71.303167,
+            "Avg": 60.817408,
+            "Samples": 5
+          }
+        },
+        "LastWarmUpTime": {
+          "Type": "Milliseconds",
+          "Value": 207
+        },
+        "LoadObjectTime": {
+          "Type": "Milliseconds",
+          "Value": {
+            "Min": 0,
+            "P50": 0,
+            "P95": 0,
+            "P99": 0,
+            "Max": 0,
+            "Avg": 0,
+            "Samples": 0
+          }
+        },
+        "SourceSize": {
+          "Type": "Bytes",
+          "Value": {
+            "Min": 0.000001,
+            "P50": 0.000001,
+            "P95": 0.000002,
+            "P99": 0.000002,
+            "Max": 0.000002,
+            "Avg": 0.0000014,
+            "Samples": 5
+          }
+        },
+        "TotalCompileTime": {
+          "Type": "Milliseconds",
+          "Value": {
+            "Min": 159.383552,
+            "P50": 184.549375,
+            "P95": 209.715199,
+            "P99": 209.715199,
+            "Max": 209.715199,
+            "Avg": 180.355072,
+            "Samples": 5
+          }
+        },
+        "WriteToDiskTime": {
+          "Type": "Milliseconds",
+          "Value": {
+            "Min": 104.8576,
+            "P50": 113.246207,
+            "P95": 150.994943,
+            "P99": 150.994943,
+            "Max": 150.994943,
+            "Avg": 118.27937279999999,
+            "Samples": 5
+          }
+        }
+      },
+      "ContractCompilationTime": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 0,
+          "P50": 0,
+          "P95": 0,
+          "P99": 0,
+          "Max": 0,
+          "Avg": 0,
+          "Samples": 0
+        }
+      },
+      "DeployedContracts": 0,
+      "ProcessCallTime": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 0.007424,
+          "P50": 0.086015,
+          "P95": 0.524287,
+          "P99": 570.425343,
+          "Max": 570.425343,
+          "Avg": 10.886731946666668,
+          "Samples": 150
+        }
+      }
+    }
+  },
+  "PublicApi": {
+    "GetTransactionStatusProcessingTime": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 0.0128,
+        "P50": 0.013311,
+        "P95": 0.015359,
+        "P99": 0.015359,
+        "Max": 0.015359,
+        "Avg": 0.01408,
+        "Samples": 2
+      }
+    },
+    "Queries": {
+      "RatePerSecond": 0
+    },
+    "RunQueryProcessingTime": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 0,
+        "P50": 0,
+        "P95": 0,
+        "P99": 0,
+        "Max": 0,
+        "Avg": 0,
+        "Samples": 0
+      }
+    },
+    "SendTransactionProcessingTime": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 570.425344,
+        "P50": 603.979775,
+        "P95": 905.969663,
+        "P99": 905.969663,
+        "Max": 905.969663,
+        "Avg": 713.03168,
+        "Samples": 4
+      }
+    },
+    "TotalTransactionsErrAddingToTxPool": 0,
+    "TotalTransactionsErrDuplicate": 0,
+    "TotalTransactionsErrInvalidRequest": 0,
+    "TotalTransactionsErrNilRequest": 0,
+    "TotalTransactionsFromClients": 4,
+    "Transactions": {
+      "RatePerSecond": 0.8479080313808864
+    }
+  },
+  "Runtime": {
+    "GCCPUPercentage": 0,
+    "HeapAlloc": {
+      "Type": "Bytes",
+      "Value": 17946616
+    },
+    "HeapIdle": {
+      "Type": "Bytes",
+      "Value": 44277760
+    },
+    "HeapInuse": {
+      "Type": "Bytes",
+      "Value": 21258240
+    },
+    "HeapObjects": 101831,
+    "HeapReleased": {
+      "Type": "Bytes",
+      "Value": 39395328
+    },
+    "HeapSys": {
+      "Type": "Bytes",
+      "Value": 65536000
+    },
+    "NumGc": 16,
+    "NumGoroutine": 118,
+    "Uptime": {
+      "Type": "Seconds",
+      "Value": 3517120
+    }
+  },
+  "StateStorage": {
+    "BlockHeight": 4618292,
+    "ReadRequestedKeys": {
+      "RatePerSecond": 7.589246498421793
+    },
+    "WriteRequestedKeys": {
+      "RatePerSecond": 109.24684578523267
+    }
+  },
+  "StateStoragePersistence": {
+    "TotalNumberOfContracts": 1,
+    "TotalNumberOfKeys": 0
+  },
+  "TransactionPool": {
+    "BlockHeight": 4618292,
+    "CommitRate": {
+      "RatePerSecond": 109.42817571709128
+    },
+    "CommittedPool": {
+      "PoolSize": {
+        "Type": "Bytes",
+        "Value": 4736
+      },
+      "Transactions": 28
+    },
+    "LastCommitted": {
+      "Type": "Nanoseconds",
+      "Value": 1592420271605523631
+    },
+    "PendingPool": {
+      "PoolSize": {
+        "Type": "Bytes",
+        "Value": 0
+      },
+      "TimeSpentInQueue": {
+        "Type": "Milliseconds",
+        "Value": {
+          "Min": 0,
+          "P50": 0,
+          "P95": 0,
+          "P99": 0,
+          "Max": 0,
+          "Avg": 0,
+          "Samples": 0
+        }
+      },
+      "Transactions": 0
+    },
+    "ServiceTime": {
+      "Type": "Milliseconds",
+      "Value": {
+        "Min": 570.425344,
+        "P50": 603.979775,
+        "P95": 905.969663,
+        "P99": 905.969663,
+        "Max": 905.969663,
+        "Avg": 713.03168,
+        "Samples": 4
+      }
+    },
+    "TotalCommits": 529,
+    "TransactionsEnteringPool": {
+      "RatePerSecond": 0.8479080313808864
+    }
+  },
+  "Version": {
+    "Commit": "4e3179b018a38d33d2d42f7abeb8ffa83e5e099b",
+    "Semantic": "v1.3.13"
+  }
+}

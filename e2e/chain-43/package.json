@@ -1,0 +1,9 @@
+{
+  "name": "vchain-mock",
+  "description": "simple mock for vchain",
+  "version": "0.0.1",
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "devDependencies": {}
+}
