@@ -1,4 +1,4 @@
-FROM local/ethereum-writer
+FROM local/keepers
 
 COPY ./app-config.json ./
 CMD npm start -- --config /opt/orbs/app-config.json

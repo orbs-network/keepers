@@ -4,7 +4,7 @@ Node service to send Ethereum transactions for elections lifecycle (like auto vo
 
 ## How to run
 
-The service is packaged as a Docker image. It is routinely published from this repo to [Docker Hub](https://hub.docker.com/repository/docker/orbsnetwork/ethereum-writer).
+The service is packaged as a Docker image. It is routinely published from this repo to [Docker Hub](https://hub.docker.com/repository/docker/orbsnetwork/keepers).
 
 ### Command-line arguments
 
@@ -83,9 +83,9 @@ The service is packaged as a Docker image. It is routinely published from this r
 
   * Run it with `npm start`.
 
-* Docker image will be built and tagged as `local/ethereum-writer`.
+* Docker image will be built and tagged as `local/keepers`.
 
-  * Run it with `docker run local/ethereum-writer`.
+  * Run it with `docker run local/keepers`.
 
 ## Test
 

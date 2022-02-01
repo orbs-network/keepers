@@ -1,4 +1,4 @@
-import { Configuration, validateConfiguration, defaultConfiguration } from './config';
+import { Configuration, defaultConfiguration } from './config';
 import yargs from 'yargs';
 import { readFileSync } from 'fs';
 import * as Logger from './logger';
@@ -31,12 +31,12 @@ export function parseArgs(argv: string[]): Configuration {
   }
 
   // validate JSON config
-  try {
-    validateConfiguration(res);
-  } catch (err) {
-    Logger.error(`Invalid JSON config: '${JSON.stringify(res)}'.`);
-    throw err;
-  }
+  // try {
+  //   validateConfiguration(res);
+  // } catch (err) {
+  //   Logger.error(`Invalid JSON config: '${JSON.stringify(res)}'.`);
+  //   throw err;
+  // }
 
   return res;
 }

@@ -1,10 +1,11 @@
 import * as Logger from '../logger';
 import { State, EthereumTxStatus, GasPriceStrategy } from '../model/state';
-import { getCurrentClockTime, jsonStringifyComplexTypes, toNumber } from '../helpers';
+import { getCurrentClockTime, jsonStringifyComplexTypes } from '../helpers';
 import { TransactionConfig, TransactionReceipt } from 'web3-core';
+import { TxData } from "@ethereumjs/tx";
 
-const GAS_LIMIT_ESTIMATE_EXTRA = 300000;
-const GAS_LIMIT_HARD_LIMIT = 2000000;
+// const GAS_LIMIT_ESTIMATE_EXTRA = 300000;
+// const GAS_LIMIT_HARD_LIMIT = 2000000;
 
 export type Type = 'ready-to-sync' | 'ready-for-committee';
 
@@ -56,7 +57,7 @@ export async function signAndSendTransaction(
 
   const nonce = await state.web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
 
-  const txObject: TransactionConfig = {
+  const txConfig: TransactionConfig = {
     from: senderAddress,
     to: contractAddress,
     gasPrice: gasPrice,
@@ -64,24 +65,35 @@ export async function signAndSendTransaction(
     nonce: nonce,
   };
 
-  Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+  Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txConfig)}.`);
 
-  let gasLimit = toNumber(await state.web3.eth.estimateGas(txObject));
-  if (gasLimit <= 0) {
-    throw new Error(`Cannot estimate gas for tx with data ${encodedAbi}.`);
+  // let gasLimit = toNumber(await state.web3.eth.estimateGas(txConfig));
+  // if (gasLimit <= 0) {
+  //   throw new Error(`Cannot estimate gas for tx with data ${encodedAbi}.`);
+  // }
+  // gasLimit += GAS_LIMIT_ESTIMATE_EXTRA;
+  // if (gasLimit > GAS_LIMIT_HARD_LIMIT) {
+  //   throw new Error(`Gas limit estimate ${gasLimit} over hard limit ${GAS_LIMIT_HARD_LIMIT}.`);
+  // }
+  // txConfig.gas = gasLimit;
+
+  Logger.log(`About to sign and send tx object: ${jsonStringifyComplexTypes(txConfig)}.`);
+
+  // Prepare transaction data for signing
+  const txData: TxData = {
+    data: txConfig.data,
+    gasLimit: 0,
+    gasPrice: "0",
+    nonce: txConfig.nonce,
+    value: String(txConfig.value || '0x'),
+    to: txConfig.to,
   }
-  gasLimit += GAS_LIMIT_ESTIMATE_EXTRA;
-  if (gasLimit > GAS_LIMIT_HARD_LIMIT) {
-    throw new Error(`Gas limit estimate ${gasLimit} over hard limit ${GAS_LIMIT_HARD_LIMIT}.`);
-  }
-  txObject.gas = gasLimit;
 
-  Logger.log(`About to sign and send tx object: ${jsonStringifyComplexTypes(txObject)}.`);
-
-  const { rawTransaction, transactionHash } = await state.signer.sign(txObject);
+  const { rawTransaction, transactionHash } = await state.signer.sign(txData);
   if (!rawTransaction || !transactionHash) {
-    throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+    throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txData)}.`);
   }
+
 
   const web3 = state.web3;
   return new Promise<string>((resolve, reject) => {

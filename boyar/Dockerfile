@@ -1,4 +1,4 @@
-FROM local/ethereum-writer
+FROM local/keepers
 
 RUN apk add --no-cache daemontools --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
 

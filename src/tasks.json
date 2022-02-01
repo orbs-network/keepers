@@ -1,0 +1,33 @@
+{
+    "tasks":[
+        {
+            "name":"revault-update-tvls",
+            "active":true,
+            "abi":"revault-tvl", 
+            "networks":["BSC"], 
+            "addresses": [ 
+                "0xd7550285532f1642511b16Df858546F2593d638B"
+            ],  
+            "send":[{
+                "method":"updateAllTvls"            
+            }],
+            "minInterval":480
+        },
+        {
+            "name":"revault-update-pool",
+            "active":true, 
+            "abi":"revault-pool",
+            "networks":["BSC"],
+            "addresses": [ 
+                "0xe8f1CDa385A58ae1C1c1b71631dA7Ad6d137d3cb"
+            ],  
+            "send":[{
+                "method":"updatePool",
+                "params":[
+                    [0],[1],[2],[3]
+                ]
+            }],
+            "minInterval":1440 
+        }       
+    ]
+}

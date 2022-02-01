@@ -26,6 +26,7 @@ export interface Configuration {
   EthereumNonDiscountTxTimeoutSeconds: number;
   EthereumMaxGasPrice: number; // in wei (below 2^54 so number is ok)
   EthereumMaxCommittedDailyTx: number;
+  BIUrl: string;
 }
 
 export const defaultConfiguration = {

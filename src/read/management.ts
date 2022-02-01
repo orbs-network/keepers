@@ -34,7 +34,7 @@ export async function readManagementStatus(endpoint: string, myOrbsAddress: stri
 
 // helpers
 
-async function fetchManagementStatus(url: string): Promise<ManagementStatusResponse> {
+export async function fetchManagementStatus(url: string): Promise<ManagementStatusResponse> {
   const res = await fetch(url);
   const body = await res.text();
   try {
