@@ -3,11 +3,9 @@ import { AbiItem } from "web3-utils"
 import { Contract } from 'web3-eth-contract';
 import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
-//import { TransactionConfig } from 'web3-core';
 import { TxData } from "@ethereumjs/tx";
 
 import Signer from 'orbs-signer-client';
-// import { debugSign } from "./debugSigner";
 
 import { readManagementStatus2, setLeaderStatus } from './leader'
 import { readFileSync, readdirSync } from 'fs';
@@ -16,16 +14,11 @@ import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 import { biSend } from "./bi";
 import {Configuration} from "./config";
-//import { setAccount, debugSign } from './debugSigner'
 
-// const GAS_LIMIT_ESTIMATE_EXTRA = 300000;
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-// const PERIODIC_MINUTES = 5; // every 5 min
 
-const abiFolder = process.cwd() + '/abi/';
-// const config = parseArgs(process.argv);
-// const HTTP_TIMEOUT_SEC = 20;
+const abiFolder = './abi/';
 
 //////////////////////////////////////
 export class Keeper {

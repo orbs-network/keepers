@@ -13,7 +13,7 @@ process.on('SIGINT', function () {
   process.exit();
 });
 
-Logger.log('Service ethereum-writer started.');
+Logger.log('Service keepers started.');
 const config = parseArgs(process.argv);
 Logger.log(`Input config: '${JSON.stringify(config)}'.`);
 
