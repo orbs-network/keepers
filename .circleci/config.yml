@@ -30,7 +30,7 @@ jobs:
     steps:
       - checkout
       - node/install:
-          node-version: '12.18.0'
+          node-version: '16.13.1'
       - docker/install-docker
       - run: ./boyar/create-version-file.sh
       - node/install-packages
@@ -42,7 +42,7 @@ jobs:
     steps:
       - checkout
       - node/install:
-          node-version: '12.18.0'
+          node-version: '16.13.1'
       - docker/install-docker
       - run: ./boyar/create-version-file.sh
       - node/install-packages
