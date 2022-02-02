@@ -1,7 +1,6 @@
 import Web3 from "web3";
 import { AbiItem } from "web3-utils"
 import { Contract } from 'web3-eth-contract';
-import { parseArgs } from './cli-args';
 import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 //import { TransactionConfig } from 'web3-core';
@@ -16,27 +15,28 @@ import { readFileSync, readdirSync } from 'fs';
 import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 import { biSend } from "./bi";
+import {Configuration} from "./config";
 //import { setAccount, debugSign } from './debugSigner'
 
 // const GAS_LIMIT_ESTIMATE_EXTRA = 300000;
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const PERIODIC_MINUTES = 5; // every 5 min
+// const PERIODIC_MINUTES = 5; // every 5 min
 
 const abiFolder = process.cwd() + '/abi/';
-const config = parseArgs(process.argv);
-const HTTP_TIMEOUT_SEC = 20;
+// const config = parseArgs(process.argv);
+// const HTTP_TIMEOUT_SEC = 20;
 
 //////////////////////////////////////
 export class Keeper {
-    private abis: { [key: string]: AbiItem };
+    private abis: { [key: string]: AbiItem[] };
     private contracts: { [key: string]: Contract };
-    private web3: Web3;
-    private chainId: number | undefined;
     private status: any;
-    private signer: Signer;
-    private gasPrice: string;
+    private gasPrice: string | undefined;
     private validEthAddress: string;
+    web3: Web3 | undefined;
+    chainId: number | undefined;
+    signer: Signer | undefined;
 
     //////////////////////////////////////
     constructor() {
@@ -48,7 +48,6 @@ export class Keeper {
             start: Date.now(),
             successTX: [],
             failedTX: [],
-            config: config,
             periodicUpdates: 0,
             lastUpdate: '',
             leaderIndex: -1,
@@ -57,15 +56,6 @@ export class Keeper {
                 "BNB": 0
             }
         };
-
-        this.web3 = new Web3(
-            new Web3.providers.HttpProvider(config.EthereumEndpoint, {
-                keepAlive: true,
-                timeout: HTTP_TIMEOUT_SEC * 1000,
-            })
-        );
-
-        this.signer = new Signer(config.SignerEndpoint);
 
         // load all ABIs
         Logger.log(`loading abis at ${abiFolder}`);
@@ -77,9 +67,6 @@ export class Keeper {
                 this.abis[name] = abi;
             }
         });
-    }
-    async setChainId() {
-		this.chainId = await this.web3.eth.getChainId()
     }
 
     getUptime(): string {
@@ -115,8 +102,9 @@ export class Keeper {
         this.status.uptime = this.getUptime();
         return this.status;
     }
+
     //////////////////////////////////////
-    async periodicUpdate() {
+    async periodicUpdate(config: Configuration) {
         this.status.periodicUpdates += 1;
         const now = new Date();
         this.status.lastUpdateUTC = now.toUTCString();
@@ -130,25 +118,16 @@ export class Keeper {
 
         // balance
         this.validEthAddress = `0x${this.status.myEthAddress}`;
-        this.status.balance.BNB = await this.web3.eth.getBalance(this.validEthAddress);
+        this.status.balance.BNB = await this.web3?.eth.getBalance(this.validEthAddress);
 
         writeStatusToDisk(config.StatusJsonPath, this.status, config);
-    }
-    //////////////////////////////////////
-    async start() {
-        Logger.log('Manager started');
-        await this.setChainId()
-        // first update
-        await this.periodicUpdate();
-        // periodic every 10 min
-        setInterval(this.periodicUpdate.bind(this), 60000 * PERIODIC_MINUTES);
 
-        //let aaa = [tasks[0], tasks[1]];
-        for (const t of tasksObj.tasks) {
+		for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
-            await this.exec(t);
+            await this.exec(t, config);
         }
     }
+
     //////////////////////////////////////
     async signAndSendTransaction(
         encodedAbi: string,
@@ -165,7 +144,7 @@ export class Keeper {
             //chainId: 56, // BSC
             //from: senderAddress,
             to: contractAddress,
-            gasPrice: toNumber(this.gasPrice),  //  + GAS_LIMIT_ESTIMATE_EXTRA,
+            gasPrice: toNumber(this.gasPrice || '0'),  // TODO: fixme only for testing
             gasLimit: GAS_LIMIT_HARD_LIMIT,
             data: encodedAbi,
             nonce: nonce,
@@ -203,7 +182,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(network: string, contract: Contract, method: string, params: any) {
+    async sendNetworkContract(network: string, contract: Contract, method: string, params: any, config: Configuration) {
         const now = new Date();
         const dt = now.toISOString();
 
@@ -244,7 +223,7 @@ export class Keeper {
         });
     }
     //////////////////////////////////////
-    async execNetworkAdress(task: any, network: string, adrs: string) {
+    async execNetworkAddress(task: any, network: string, adrs: string, config: Configuration) {
         // resolve abi
         const abi = this.abis[task.abi];
         if (!abi) {
@@ -253,10 +232,7 @@ export class Keeper {
 
         // resolev contract
         if (!(adrs in this.contracts)) {
-            this.contracts[adrs] = new this.web3.eth.Contract(abi, adrs, {
-                from: this.validEthAddress, // default from address
-                gasPrice: this.gasPrice // default gas price in wei, 20 gwei in this case
-            });
+            this.contracts[adrs] = new Contract(abi, adrs)
         }
         const contract = this.contracts[adrs];
 
@@ -264,22 +240,23 @@ export class Keeper {
             // has params
             if (send.params) {
                 for (let params of send.params) {
-                    await this.sendNetworkContract(network, contract, send.method, params);
+                    await this.sendNetworkContract(network, contract, send.method, params, config);
                 }
             } // no params
             else {
-                await this.sendNetworkContract(network, contract, send.method, null);
+                await this.sendNetworkContract(network, contract, send.method, null, config);
             }
         }
     }
     //////////////////////////////////////
-    async execNetwork(task: any, network: string) {
+    async execNetwork(task: any, network: string, config: Configuration) {
         for (let adrs of task.addresses) {
-            await this.execNetworkAdress(task, network, adrs);
+            await this.execNetworkAddress(task, network, adrs, config);
         }
     }
     //////////////////////////////////////
-    async exec(task: any) {
+    async exec(task: any, config: Configuration) {
+
         Logger.log(`execute task: ${task.name}`);
         if (!task.active) {
             Logger.log(`task ${task.name} inactive`);
@@ -297,27 +274,16 @@ export class Keeper {
 
         try {
             // update before loop execution
-            this.gasPrice = await this.web3.eth.getGasPrice();
+            this.gasPrice = await this.web3?.eth.getGasPrice();
 
             for (let network of task.networks) {
-                await this.execNetwork(task, network);
+                await this.execNetwork(task, network, config);
             }
         } catch (e) {
             Logger.log(`Exception thrown from task: ${task.name}`);
             Logger.error(e);
         }
-
-        // next execution
-        setTimeout(() => {
-            this.exec(task);
-        }, task.minInterval * 1000 * 60);
-
     }
 }
 
 ////////////////////////////////////////////////
-// test
-if (require.main === module) {
-    const m = new Keeper();
-    m.start();
-}
