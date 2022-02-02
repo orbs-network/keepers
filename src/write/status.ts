@@ -2,7 +2,6 @@ import * as Logger from '../logger';
 //import { State } from '../model/state';
 import { writeFileSync } from 'fs';
 import { ensureFileDirectoryExists } from '../helpers';//, JsonResponse, getCurrentClockTime, getTenDayPeriod }  ;
-import { Configuration } from '../config';
 //import { weiToEth } from '../model/helpers';
 
 // const MINIMUM_ALLOWED_ETH_BALANCE_WEI = BigInt('100000000000000000'); // 0.1 ETH
@@ -10,7 +9,7 @@ import { Configuration } from '../config';
 // const TX_CONSECUTIVE_TIMEOUTS = 10;
 //const TX_SEND_FAILURE_TIMEOUT = 24 * 60 * 60; // seconds
 
-export function writeStatusToDisk(filePath: string, state: any, config: Configuration, err?: any) {
+export function writeStatusToDisk(filePath: string, state: any) {
   // const status: JsonResponse = {
   //   Status: getStatusText(state),
   //   Timestamp: new Date().toISOString(),
@@ -55,8 +54,8 @@ export function writeStatusToDisk(filePath: string, state: any, config: Configur
 
   // do the actual writing to local file
   ensureFileDirectoryExists(filePath);
-  state.config = config;
-  state.error = err;
+  // state.config = config;
+  // state.error = err;
   const content = JSON.stringify(state, null, 2);
   writeFileSync(filePath, content);
 

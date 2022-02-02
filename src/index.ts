@@ -12,7 +12,7 @@ import {
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
   // initialize status.json to make sure healthcheck passes from now on
-  writeStatusToDisk(config.StatusJsonPath, state, config);
+  writeStatusToDisk(config.StatusJsonPath, state);
 
   for (;;) {
     try {
@@ -23,7 +23,7 @@ export async function runLoop(config: Configuration) {
       await runLoopTick(config, state);
 
       // write status.json file, we don't mind doing this often (2min)
-      writeStatusToDisk(config.StatusJsonPath, state, config);
+      writeStatusToDisk(config.StatusJsonPath, state);
 
       await sleep(config.RunLoopPollTimeSeconds * 1000); // TODO: move sleep to start of block
 
@@ -32,7 +32,7 @@ export async function runLoop(config: Configuration) {
       Logger.error(err.stack);
 
       // always write status.json file (and pass the error)
-      writeStatusToDisk(config.StatusJsonPath, state, config, err);
+      writeStatusToDisk(config.StatusJsonPath, state);
     }
   }
 }
