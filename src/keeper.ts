@@ -8,7 +8,6 @@ import { TxData } from "@ethereumjs/tx";
 import Signer from 'orbs-signer-client';
 
 import { readManagementStatus2, setLeaderStatus } from './leader'
-import { readFileSync, readdirSync } from 'fs';
 
 import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
@@ -18,7 +17,7 @@ import {Configuration} from "./config";
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
 
-const abiFolder = './abi/';
+import {REVAULT_POOL_ABI} from './abis';
 
 //////////////////////////////////////
 export class Keeper {
@@ -51,15 +50,21 @@ export class Keeper {
         };
 
         // load all ABIs
-        Logger.log(`loading abis at ${abiFolder}`);
-        readdirSync(abiFolder).forEach(file => {
-            Logger.log(`loading ABI file: ${file}`);
-            let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
-            if (abi) {
-                var name = file.substring(0, file.lastIndexOf('.')) || file;
-                this.abis[name] = abi;
-            }
-        });
+        // Logger.log(`loading abis at ${abiFolder}`);
+        // let files = ['./abi/revault-pool.json', './abi/revault-tvl.json'];
+		// TODO: change just for dbg
+
+		// let abi = JSON.parse(REVAULT_POOL_ABI);
+		this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
+
+        // readdirSync(abiFolder).forEach(file => {
+        //     Logger.log(`loading ABI file: ${file}`);
+        //     let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
+        //     if (abi) {
+        //         var name = file.substring(0, file.lastIndexOf('.')) || file;
+        //         this.abis[name] = abi;
+        //     }
+        // });
     }
 
     getUptime(): string {
