@@ -1,7 +1,7 @@
 import Web3 from "web3";
 import { AbiItem } from "web3-utils"
 import { Contract } from 'web3-eth-contract';
-import { writeStatusToDisk } from './write/status';
+// import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
 
@@ -118,7 +118,7 @@ export class Keeper {
         this.validEthAddress = `0x${this.status.myEthAddress}`;
         this.status.balance.BNB = await this.web3?.eth.getBalance(this.validEthAddress);
 
-        writeStatusToDisk(config.StatusJsonPath, this.status, config);
+        // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 
 		for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
