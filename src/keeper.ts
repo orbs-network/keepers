@@ -8,7 +8,7 @@ import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
 
 import Signer from 'orbs-signer-client';
-import { debugSign } from "./debugSigner";
+// import { debugSign } from "./debugSigner";
 
 import { readManagementStatus2, setLeaderStatus } from './leader'
 import { readFileSync, readdirSync } from 'fs';
@@ -64,7 +64,7 @@ export class Keeper {
         );
         this.signer = new Signer(config.SignerEndpoint);
 
-        // load all ABIs                
+        // load all ABIs
         Logger.log(`loading abis at ${abiFolder}`);
         readdirSync(abiFolder).forEach(file => {
             Logger.log(`loading ABI file: ${file}`);
@@ -165,9 +165,11 @@ export class Keeper {
 
         Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
 
-        //const { rawTransaction, transactionHash } = await this.signer.sign(txObject, 56);
+        const { rawTransaction, transactionHash } = await this.signer.sign(txObject, 56);
         // setAccount(web3);
-        const { rawTransaction, transactionHash } = debugSign(txObject);
+
+        // const { rawTransaction, transactionHash } = debugSign(txObject); // TODO: ami
+
         //const { rawTransaction, transactionHash } = await debugSignAccount(txObject);
 
         if (!rawTransaction || !transactionHash) {
@@ -210,7 +212,7 @@ export class Keeper {
         }
 
 
-        // encode call                
+        // encode call
         let encoded: any;
         if (params) {
             encoded = contract.methods[method](params).encodeABI();
