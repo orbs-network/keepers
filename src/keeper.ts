@@ -18,7 +18,7 @@ import * as Logger from './logger';
 import { biSend } from "./bi";
 //import { setAccount, debugSign } from './debugSigner'
 
-const GAS_LIMIT_ESTIMATE_EXTRA = 300000;
+// const GAS_LIMIT_ESTIMATE_EXTRA = 300000;
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
 const PERIODIC_MINUTES = 5; // every 5 min
@@ -32,6 +32,7 @@ export class Keeper {
     private abis: { [key: string]: AbiItem };
     private contracts: { [key: string]: Contract };
     private web3: Web3;
+    private chainId: number | undefined;
     private status: any;
     private signer: Signer;
     private gasPrice: string;
@@ -56,12 +57,14 @@ export class Keeper {
                 "BNB": 0
             }
         };
+
         this.web3 = new Web3(
             new Web3.providers.HttpProvider(config.EthereumEndpoint, {
                 keepAlive: true,
                 timeout: HTTP_TIMEOUT_SEC * 1000,
             })
         );
+
         this.signer = new Signer(config.SignerEndpoint);
 
         // load all ABIs
@@ -75,6 +78,10 @@ export class Keeper {
             }
         });
     }
+    async setChainId() {
+		this.chainId = await this.web3.eth.getChainId()
+    }
+
     getUptime(): string {
         // get total seconds between the times
         var delta = Math.abs(Date.now() - this.status.start) / 1000;
@@ -130,6 +137,7 @@ export class Keeper {
     //////////////////////////////////////
     async start() {
         Logger.log('Manager started');
+        await this.setChainId()
         // first update
         await this.periodicUpdate();
         // periodic every 10 min
@@ -157,7 +165,7 @@ export class Keeper {
             //chainId: 56, // BSC
             //from: senderAddress,
             to: contractAddress,
-            gasPrice: toNumber(this.gasPrice) + GAS_LIMIT_ESTIMATE_EXTRA,
+            gasPrice: toNumber(this.gasPrice),  //  + GAS_LIMIT_ESTIMATE_EXTRA,
             gasLimit: GAS_LIMIT_HARD_LIMIT,
             data: encodedAbi,
             nonce: nonce,
@@ -165,10 +173,10 @@ export class Keeper {
 
         Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
 
-        const { rawTransaction, transactionHash } = await this.signer.sign(txObject, 56);
+        const { rawTransaction, transactionHash } = await this.signer.sign(txObject, this.chainId);
         // setAccount(web3);
 
-        // const { rawTransaction, transactionHash } = debugSign(txObject); // TODO: ami
+        // const { rawTransaction, transactionHash } = debugSign(txObject);
 
         //const { rawTransaction, transactionHash } = await debugSignAccount(txObject);
 
