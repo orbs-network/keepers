@@ -11,7 +11,7 @@ import { readManagementStatus2, setLeaderStatus } from './leader'
 
 import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
-import { biSend } from "./bi";
+// import { biSend } from "./bi";
 import {Configuration} from "./config";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
@@ -122,7 +122,7 @@ export class Keeper {
 
 		for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
-            await this.exec(t, config);
+            await this.exec(t);
         }
     }
 
@@ -180,7 +180,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(network: string, contract: Contract, method: string, params: any, config: Configuration) {
+    async sendNetworkContract(network: string, contract: Contract, method: string, params: any) {
         const now = new Date();
         const dt = now.toISOString();
 
@@ -208,20 +208,20 @@ export class Keeper {
         await this.signAndSendTransaction(encoded, contract.options.address, this.validEthAddress).then(async (txhash) => {
             this.status.successTX.push(tx);
             bi.txhash = txhash;
-            await biSend(config.BIUrl, bi);
+            // await biSend(config.BIUrl, bi);
             Logger.log('SUCCESS:' + tx);
 
         }).catch(async (err: Error) => {
             this.status.failedTX.push(tx);
             bi.success = false;
             bi.error = err.message;
-            await biSend(config.BIUrl, bi);
+            // await biSend(config.BIUrl, bi);
             Logger.error('signAndSendTransaction exception: ' + err.message);
             Logger.log('FAIL:' + tx);
         });
     }
     //////////////////////////////////////
-    async execNetworkAddress(task: any, network: string, adrs: string, config: Configuration) {
+    async execNetworkAddress(task: any, network: string, adrs: string) {
         // resolve abi
         const abi = this.abis[task.abi];
         if (!abi) {
@@ -238,22 +238,22 @@ export class Keeper {
             // has params
             if (send.params) {
                 for (let params of send.params) {
-                    await this.sendNetworkContract(network, contract, send.method, params, config);
+                    await this.sendNetworkContract(network, contract, send.method, params);
                 }
             } // no params
             else {
-                await this.sendNetworkContract(network, contract, send.method, null, config);
+                await this.sendNetworkContract(network, contract, send.method, null);
             }
         }
     }
     //////////////////////////////////////
-    async execNetwork(task: any, network: string, config: Configuration) {
+    async execNetwork(task: any, network: string) {
         for (let adrs of task.addresses) {
-            await this.execNetworkAddress(task, network, adrs, config);
+            await this.execNetworkAddress(task, network, adrs);
         }
     }
     //////////////////////////////////////
-    async exec(task: any, config: Configuration) {
+    async exec(task: any) {
 
         Logger.log(`execute task: ${task.name}`);
         if (!task.active) {
@@ -262,20 +262,20 @@ export class Keeper {
         }
 
         // send bi
-        let bi: any = {
-            type: 'execTask',
-            network: task.name,
-            minInterval: task.minInterval,
-            nodeName: this.status.myNode.Name,
-        }
-        await biSend(config.BIUrl, bi);
+        // let bi: any = {
+        //     type: 'execTask',
+        //     network: task.name,
+        //     minInterval: task.minInterval,
+        //     nodeName: this.status.myNode.Name,
+        // }
+        // await biSend(config.BIUrl, bi);
 
         try {
             // update before loop execution
             this.gasPrice = await this.web3?.eth.getGasPrice();
 
             for (let network of task.networks) {
-                await this.execNetwork(task, network, config);
+                await this.execNetwork(task, network);
             }
         } catch (e) {
             Logger.log(`Exception thrown from task: ${task.name}`);
