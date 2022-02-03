@@ -144,7 +144,7 @@ export class Keeper {
         if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
         if (!this.signer) throw new Error('Cannot send tx until signer is initialized.');
 
-        const nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
+        // const nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
 
         const txObject: TxData = {
             //chainId: 56, // BSC
@@ -153,7 +153,7 @@ export class Keeper {
             gasPrice: toNumber(this.gasPrice || '0'),  // TODO: fixme only for testing
             gasLimit: GAS_LIMIT_HARD_LIMIT,
             data: encodedAbi,
-            nonce: nonce,
+            // nonce: nonce,
         };
 
         Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
