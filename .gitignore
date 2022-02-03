@@ -2,3 +2,5 @@
 .version
 dist/
 node_modules/
+papackage-lock.json
+debugSigner.ts
