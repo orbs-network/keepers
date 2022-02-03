@@ -138,7 +138,7 @@ export class Keeper {
     async signAndSendTransaction(
         encodedAbi: string,
         contractAddress: string,
-        senderAddress: string
+        // senderAddress: string
     ): Promise<string> {
         const web3 = this.web3;
         if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
