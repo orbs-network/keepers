@@ -1,5 +1,6 @@
 import Web3 from "web3";
-import { Contract } from 'web3-eth-contract';
+// import { Contract } from 'web3-eth-contract';
+
 // import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
@@ -19,7 +20,7 @@ const MAX_LAST_TX = 10;
 //////////////////////////////////////
 export class Keeper {
     // private abis: { [key: string]: AbiItem[] };
-    private contracts: { [key: string]: Contract };
+    // private contracts: { [key: string]: Contract};
     private status: any;
     private gasPrice: string | undefined;
     private validEthAddress: string;
@@ -30,7 +31,7 @@ export class Keeper {
     //////////////////////////////////////
     constructor() {
         // this.abis = {};
-        this.contracts = {};
+        // this.contracts = {};
         this.gasPrice = '';
         this.validEthAddress = '';
         this.status = {
@@ -113,7 +114,8 @@ export class Keeper {
 
         // balance
         this.validEthAddress = `0x${this.status.myEthAddress}`;
-        this.status.balance.BNB = await this.web3?.eth.getBalance(this.validEthAddress);
+        if (!this.web3) throw new Error('web3 client is not initialized.');
+        this.status.balance.BNB = await this.web3.eth.getBalance(this.validEthAddress);
 
         // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 
@@ -122,6 +124,15 @@ export class Keeper {
             await this.exec(t);
         }
     }
+
+	async dbgTask() {
+
+		for (const t of tasksObj.tasks) {
+            // first call - after that, task sets the next execution
+            await this.exec(t);
+        }
+
+	}
 
     //////////////////////////////////////
     async signAndSendTransaction(
@@ -177,7 +188,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(network: string, contract: Contract, method: string, params: any) {
+    async sendNetworkContract(network: string, contract: any, method: string, params: any) {
         const now = new Date();
         const dt = now.toISOString();
 
@@ -189,10 +200,9 @@ export class Keeper {
             method: method,
             params: params,
             sender: this.validEthAddress,
-            nodeName: this.status.myNode.Name,
+            // nodeName: this.status.myNode.Name,
             success: true
         }
-
 
         // encode call
         let encoded: any;
@@ -225,11 +235,15 @@ export class Keeper {
             return console.error(`abi ${task.name} does not exist in folder`);
         }
 
+        if (!this.web3) throw new Error('web3 client is not initialized.');
+
         // resolve contract
-        if (!(adrs in this.contracts)) {
-            this.contracts[adrs] = new Contract(abi, adrs)
-        }
-        const contract = this.contracts[adrs];
+        // if (!(adrs in this.contracts)) {
+        //     this.contracts[adrs] = new this.web3.eth.Contract(abi, adrs);
+        // }
+
+        // const contract = this.contracts[adrs];
+		let contract = new this.web3.eth.Contract(abi, adrs);
 
         for (let send of task.send) {
             // has params
@@ -266,10 +280,16 @@ export class Keeper {
         //     nodeName: this.status.myNode.Name,
         // }
         // await biSend(config.BIUrl, bi);
-
+		
         try {
+
+			if (!this.web3) {
+				Logger.error('web3 client is not initialized.');
+				return;
+			}
+
             // update before loop execution
-            this.gasPrice = await this.web3?.eth.getGasPrice();
+            this.gasPrice = await this.web3.eth.getGasPrice();
 
             for (let network of task.networks) {
                 await this.execNetwork(task, network);
