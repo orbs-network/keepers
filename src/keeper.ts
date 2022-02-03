@@ -138,7 +138,6 @@ export class Keeper {
     async signAndSendTransaction(
         encodedAbi: string,
         contractAddress: string,
-        // senderAddress: string
     ): Promise<string> {
         const web3 = this.web3;
         if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
@@ -148,7 +147,6 @@ export class Keeper {
 
         const txObject: TxData = {
             //chainId: 56, // BSC
-            //from: senderAddress,
             to: contractAddress,
             gasPrice: toNumber(this.gasPrice || '0'),  // TODO: fixme only for testing
             gasLimit: GAS_LIMIT_HARD_LIMIT,
@@ -212,7 +210,7 @@ export class Keeper {
             encoded = contract.methods[method]().encodeABI();
         }
 
-        await this.signAndSendTransaction(encoded, contract.options.address, this.validEthAddress).then(async (txhash) => {
+        await this.signAndSendTransaction(encoded, contract.options.address).then(async (txhash) => {
             this.status.successTX.push(tx);
             bi.txhash = txhash;
             // await biSend(config.BIUrl, bi);
