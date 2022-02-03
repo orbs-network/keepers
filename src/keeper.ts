@@ -225,7 +225,7 @@ export class Keeper {
             return console.error(`abi ${task.name} does not exist in folder`);
         }
 
-        // resolev contract
+        // resolve contract
         if (!(adrs in this.contracts)) {
             this.contracts[adrs] = new Contract(abi, adrs)
         }
