@@ -1,5 +1,4 @@
 import Web3 from "web3";
-import { AbiItem } from "web3-utils"
 import { Contract } from 'web3-eth-contract';
 // import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
@@ -17,11 +16,9 @@ import {Configuration} from "./config";
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
 
-import {REVAULT_POOL_ABI} from './abis';
-
 //////////////////////////////////////
 export class Keeper {
-    private abis: { [key: string]: AbiItem[] };
+    // private abis: { [key: string]: AbiItem[] };
     private contracts: { [key: string]: Contract };
     private status: any;
     private gasPrice: string | undefined;
@@ -32,7 +29,7 @@ export class Keeper {
 
     //////////////////////////////////////
     constructor() {
-        this.abis = {};
+        // this.abis = {};
         this.contracts = {};
         this.gasPrice = '';
         this.validEthAddress = '';
@@ -55,7 +52,7 @@ export class Keeper {
 		// TODO: change just for dbg
 
 		// let abi = JSON.parse(REVAULT_POOL_ABI);
-		this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
+		// this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
 
         // readdirSync(abiFolder).forEach(file => {
         //     Logger.log(`loading ABI file: ${file}`);
@@ -223,9 +220,9 @@ export class Keeper {
     //////////////////////////////////////
     async execNetworkAddress(task: any, network: string, adrs: string) {
         // resolve abi
-        const abi = this.abis[task.abi];
+        const abi = task.abi;
         if (!abi) {
-            return console.error(`abi ${task.abi} does not exist in folder`);
+            return console.error(`abi ${task.name} does not exist in folder`);
         }
 
         // resolev contract
