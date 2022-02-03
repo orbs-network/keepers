@@ -58,22 +58,22 @@ async function initializeState(config: Configuration): Promise<Keeper> {
 }
 
 
-async function test() {
-
-	const config : Configuration = {
-		"ManagementServiceEndpoint": "http://34.235.246.172/services/matic-reader",
-		"EthereumEndpoint": "https://speedy-nodes-nyc.moralis.io/e25f7625703c58a9068b9947/bsc/mainnet",
-		"SignerEndpoint": "http://signer:7777",
-		"EthereumDiscountGasPriceFactor": 1,
-		"NodeOrbsAddress": "9f0988cd37f14dfe95d44cf21f9987526d6147ba",
-		"StatusJsonPath": './status/status.json',
-		"RunLoopPollTimeSeconds": 1,
-		"BIUrl": "http://logs.orbs.network:3001/putes/keepersew"
-	}
-
-	const keeper = await initializeState(config);
-	await keeper.dbgTask();
-
-}
+// async function test() {
+//
+// 	const config : Configuration = {
+// 		"ManagementServiceEndpoint": "http://34.235.246.172/services/matic-reader",
+// 		"EthereumEndpoint": "https://speedy-nodes-nyc.moralis.io/e25f7625703c58a9068b9947/bsc/mainnet",
+// 		"SignerEndpoint": "http://signer:7777",
+// 		"EthereumDiscountGasPriceFactor": 1,
+// 		"NodeOrbsAddress": "9f0988cd37f14dfe95d44cf21f9987526d6147ba",
+// 		"StatusJsonPath": './status/status.json',
+// 		"RunLoopPollTimeSeconds": 1,
+// 		"BIUrl": "http://logs.orbs.network:3001/putes/keepersew"
+// 	}
+//
+// 	const keeper = await initializeState(config);
+// 	await keeper.dbgTask();
+//
+// }
 
 // test().then(console.log);

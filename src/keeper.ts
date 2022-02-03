@@ -280,7 +280,7 @@ export class Keeper {
         //     nodeName: this.status.myNode.Name,
         // }
         // await biSend(config.BIUrl, bi);
-		
+
         try {
 
 			if (!this.web3) {
