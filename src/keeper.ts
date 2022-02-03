@@ -149,7 +149,7 @@ export class Keeper {
         const txObject: TxData = {
             //chainId: 56, // BSC
             to: contractAddress,
-            gasPrice: toNumber(this.gasPrice || '0') + 1000,  // TODO: fixme only for testing
+            gasPrice: toNumber(this.gasPrice || '0'),  // TODO: fixme only for testing
             gasLimit: GAS_LIMIT_HARD_LIMIT,
             data: encodedAbi,
             // nonce: nonce,
