@@ -3,7 +3,7 @@ import { Keeper } from './keeper';
 import * as Logger from './logger';
 import { sleep } from './helpers';
 import { Configuration } from './config';
-import { writeStatusToDisk } from './write/status';
+// import { writeStatusToDisk } from './write/status';
 import Signer from 'orbs-signer-client';
 import {
   initWeb3Client,
