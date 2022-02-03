@@ -14,7 +14,7 @@ export async function runLoop(config: Configuration) {
   // initialize status.json to make sure healthcheck passes from now on
   // writeStatusToDisk(config.StatusJsonPath, state);
 
-  for (;;) {
+  for (; ;) {
     try {
       // rest (to make sure we don't retry too aggressively on exceptions)
       // await sleep(config.RunLoopPollTimeSeconds * 1000);

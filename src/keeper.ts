@@ -1,9 +1,10 @@
 import Web3 from "web3";
 import { Contract } from 'web3-eth-contract';
-// import { writeStatusToDisk } from './write/status';
+import { AbiItem } from "web3-utils"
+import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
-
+import { readFileSync, readdirSync } from 'fs';
 import Signer from 'orbs-signer-client';
 
 import { readManagementStatus2, setLeaderStatus } from './leader'
@@ -11,14 +12,18 @@ import { readManagementStatus2, setLeaderStatus } from './leader'
 import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
-import {Configuration} from "./config";
+import { Configuration } from "./config";
+import { config } from "yargs";
+
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
 
+const abiFolder = process.cwd() + '/abi/';
+
 //////////////////////////////////////
 export class Keeper {
-    // private abis: { [key: string]: AbiItem[] };
+    private abis: { [key: string]: AbiItem[] };
     private contracts: { [key: string]: Contract };
     private status: any;
     private gasPrice: string | undefined;
@@ -29,7 +34,7 @@ export class Keeper {
 
     //////////////////////////////////////
     constructor() {
-        // this.abis = {};
+        this.abis = {};
         this.contracts = {};
         this.gasPrice = '';
         this.validEthAddress = '';
@@ -37,6 +42,7 @@ export class Keeper {
             start: Date.now(),
             successTX: [],
             failedTX: [],
+            config: config,
             periodicUpdates: 0,
             lastUpdate: '',
             leaderIndex: -1,
@@ -47,21 +53,21 @@ export class Keeper {
         };
 
         // load all ABIs
-        // Logger.log(`loading abis at ${abiFolder}`);
+        Logger.log(`loading abis at ${abiFolder}`);
         // let files = ['./abi/revault-pool.json', './abi/revault-tvl.json'];
-		// TODO: change just for dbg
+        // TODO: change just for dbg
 
-		// let abi = JSON.parse(REVAULT_POOL_ABI);
-		// this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
+        // let abi = JSON.parse(REVAULT_POOL_ABI);
+        // this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
 
-        // readdirSync(abiFolder).forEach(file => {
-        //     Logger.log(`loading ABI file: ${file}`);
-        //     let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
-        //     if (abi) {
-        //         var name = file.substring(0, file.lastIndexOf('.')) || file;
-        //         this.abis[name] = abi;
-        //     }
-        // });
+        readdirSync(abiFolder).forEach(file => {
+            Logger.log(`loading ABI file: ${file}`);
+            let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
+            if (abi) {
+                var name = file.substring(0, file.lastIndexOf('.')) || file;
+                this.abis[name] = abi;
+            }
+        });
     }
 
     getUptime(): string {
@@ -109,15 +115,18 @@ export class Keeper {
             await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, this.status);
 
         // sets leader index and name
+        // has to be after [readManagement]
         setLeaderStatus(management.Payload.CurrentCommittee, this.status);
+        this.status.isLeader = this.status.myNode.Name === this.status.leaderName;
 
         // balance
         this.validEthAddress = `0x${this.status.myEthAddress}`;
         this.status.balance.BNB = await this.web3?.eth.getBalance(this.validEthAddress);
 
-        // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 
-		for (const t of tasksObj.tasks) {
+        writeStatusToDisk(config.StatusJsonPath, this.status);
+
+        for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
             await this.exec(t);
         }
@@ -151,7 +160,6 @@ export class Keeper {
         // setAccount(web3);
 
         // const { rawTransaction, transactionHash } = debugSign(txObject);
-
         //const { rawTransaction, transactionHash } = await debugSignAccount(txObject);
 
         if (!rawTransaction || !transactionHash) {
