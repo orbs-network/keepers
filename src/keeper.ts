@@ -115,7 +115,7 @@ export class Keeper {
         // balance
         this.validEthAddress = `0x${this.status.myEthAddress}`;
         if (!this.web3) throw new Error('web3 client is not initialized.');
-        this.status.balance.BNB = await this.web3.eth.getBalance(this.validEthAddress);
+        // this.status.balance.BNB = await this.web3.eth.getBalance(this.validEthAddress);
 
         // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 
