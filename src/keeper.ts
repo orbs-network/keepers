@@ -13,6 +13,7 @@ import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
 import {Configuration} from "./config";
+// import {EthereumTxStatus} from "./model/state";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
@@ -27,6 +28,7 @@ export class Keeper {
     web3: Web3 | undefined;
     chainId: number | undefined;
     signer: Signer | undefined;
+    txHash: string [] ; // TODO: consider use EthereumTxStatus
 
     //////////////////////////////////////
     constructor() {
@@ -46,6 +48,7 @@ export class Keeper {
                 "BNB": 0
             }
         };
+		this.txHash = [];
 
         // load all ABIs
         // Logger.log(`loading abis at ${abiFolder}`);
@@ -118,41 +121,66 @@ export class Keeper {
         // this.status.balance.BNB = await this.web3.eth.getBalance(this.validEthAddress);
 
         // writeStatusToDisk(config.StatusJsonPath, this.status, config);
+	    const senderAddress = `0x${config.NodeOrbsAddress}`;
 
 		for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
-            await this.exec(t);
+            await this.exec(t, senderAddress);
         }
     }
 
-	async dbgTask() {
+	async dbgTask(senderAddress: string) {
 
 		for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
-            await this.exec(t);
+            await this.exec(t, senderAddress);
         }
 
+	}
+
+	// TODO: tmp handling should be handled properly
+	async shouldSendTx() {
+		if (!this.web3) throw new Error('Cannot send tx until web3 client is initialized.');
+
+		for (const [i, txHash] of this.txHash.entries()) {
+			  console.log(`checking txHash: ${txHash}`);
+			  const tx = await this.web3.eth.getTransaction(txHash);
+			  if (tx == null || tx.blockNumber == null) {
+				Logger.log(`tx ${txHash} is still waiting for block.`);
+				return false; // still pending
+			  }
+
+			  const receipt = await this.web3.eth.getTransactionReceipt(txHash);
+			  if (receipt == null) {
+				Logger.log(`tx ${txHash} does not have receipt yet.`);
+				return false; // still pending
+			  }
+
+			  this.txHash.splice(i, 1);
+		}
+
+		return true;
 	}
 
     //////////////////////////////////////
     async signAndSendTransaction(
         encodedAbi: string,
         contractAddress: string,
+		senderAddress: string,
     ): Promise<string> {
         const web3 = this.web3;
         if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
         if (!this.signer) throw new Error('Cannot send tx until signer is initialized.');
 
-        // let nonce = await web3.eth.getTransactionCount('0x9f0988Cd37f14dfe95d44cf21f9987526d6147Ba', 'latest'); // ignore pending pool
-		// Logger.log(`nonce: ${nonce}`);
+        let nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
+		Logger.log(`senderAddress: ${senderAddress} nonce: ${nonce}`);
 
         const txObject: TxData = {
-            //chainId: 56, // BSC
             to: contractAddress,
             gasPrice: toNumber(this.gasPrice || '0') * 1.1,  // TODO: fixme only for testing
             gasLimit: GAS_LIMIT_HARD_LIMIT,
             data: encodedAbi,
-            // nonce: nonce,
+            nonce: nonce,
         };
 
         Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
@@ -167,6 +195,8 @@ export class Keeper {
         if (!rawTransaction || !transactionHash) {
             throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
         }
+
+		this.txHash.push(transactionHash);
 
         return new Promise<string>((resolve, reject) => {
             // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
@@ -187,7 +217,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(network: string, contract: any, method: string, params: any) {
+    async sendNetworkContract(network: string, contract: any, method: string, params: any, senderAddress: string) {
         const now = new Date();
         const dt = now.toISOString();
 
@@ -211,7 +241,7 @@ export class Keeper {
             encoded = contract.methods[method]().encodeABI();
         }
 
-        await this.signAndSendTransaction(encoded, contract.options.address).then(async (txhash) => {
+        await this.signAndSendTransaction(encoded, contract.options.address, senderAddress).then(async (txhash) => {
             this.status.successTX.push(tx);
             bi.txhash = txhash;
             // await biSend(config.BIUrl, bi);
@@ -227,7 +257,7 @@ export class Keeper {
         });
     }
     //////////////////////////////////////
-    async execNetworkAddress(task: any, network: string, adrs: string) {
+    async execNetworkAddress(task: any, network: string, adrs: string, senderAddress: string) {
         // resolve abi
         const abi = task.abi;
         if (!abi) {
@@ -248,22 +278,22 @@ export class Keeper {
             // has params
             if (send.params) {
                 for (let params of send.params) {
-                    await this.sendNetworkContract(network, contract, send.method, params);
+                    await this.sendNetworkContract(network, contract, send.method, params, senderAddress);
                 }
             } // no params
             else {
-                await this.sendNetworkContract(network, contract, send.method, null);
+                await this.sendNetworkContract(network, contract, send.method, null, senderAddress);
             }
         }
     }
     //////////////////////////////////////
-    async execNetwork(task: any, network: string) {
+    async execNetwork(task: any, network: string, senderAddress: string) {
         for (let adrs of task.addresses) {
-            await this.execNetworkAddress(task, network, adrs);
+            await this.execNetworkAddress(task, network, adrs, senderAddress);
         }
     }
     //////////////////////////////////////
-    async exec(task: any) {
+    async exec(task: any,   senderAddress: string) {
 
         Logger.log(`execute task: ${task.name}`);
         if (!task.active) {
@@ -291,7 +321,7 @@ export class Keeper {
             this.gasPrice = await this.web3.eth.getGasPrice();
 
             for (let network of task.networks) {
-                await this.execNetwork(task, network);
+                await this.execNetwork(task, network, senderAddress);
             }
         } catch (e) {
             Logger.log(`Exception thrown from task: ${task.name}`);

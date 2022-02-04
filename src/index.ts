@@ -7,6 +7,7 @@ import { Configuration } from './config';
 import Signer from 'orbs-signer-client';
 import {
   initWeb3Client,
+  readPendingTransactionStatus
 } from './write/ethereum';
 
 export async function runLoop(config: Configuration) {
@@ -41,8 +42,9 @@ export async function runLoop(config: Configuration) {
 async function runLoopTick(config: Configuration, state: Keeper) {
   Logger.log('Run loop waking up.');
 
-  await state.periodicUpdate(config);
-
+  if (await state.shouldSendTx()) { // TODO: tmp handling
+	  await state.periodicUpdate(config);
+  }
 
 }
 
@@ -72,7 +74,7 @@ async function initializeState(config: Configuration): Promise<Keeper> {
 // 	}
 //
 // 	const keeper = await initializeState(config);
-// 	await keeper.dbgTask();
+// 	await keeper.dbgTask(`0x${config.OrbsNodeAddress}`);
 //
 // }
 //
