@@ -7,7 +7,6 @@ import { Configuration } from './config';
 import Signer from 'orbs-signer-client';
 import {
   initWeb3Client,
-  readPendingTransactionStatus
 } from './write/ethereum';
 
 export async function runLoop(config: Configuration) {
