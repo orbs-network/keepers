@@ -233,6 +233,8 @@ export class Keeper {
 		this.pendingTx.taskName = task.name;
 		this.pendingTx.taskInterval = task.taskInterval;
 
+		Logger.log(`taskName ${this.pendingTx.taskName}, taskInterval ${this.pendingTx.taskInterval}, txHash ${this.pendingTx.txHash} was added to pendingTx`);
+
         return new Promise<string>((resolve, reject) => {
             // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
             web3.eth
