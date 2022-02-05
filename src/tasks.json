@@ -11,7 +11,8 @@
             "send":[{
                 "method":"updateAllTvls"
             }],
-            "minInterval":480
+            "minInterval":480,
+            "taskInterval": 480
         },
         {
             "name":"revault-update-pool",
@@ -27,7 +28,8 @@
                     [0],[1],[2],[3]
                 ]
             }],
-            "minInterval":1440
+            "minInterval":1440,
+            "taskInterval": 1440
         }
     ]
 }

@@ -41,9 +41,7 @@ export async function runLoop(config: Configuration) {
 async function runLoopTick(config: Configuration, state: Keeper) {
   Logger.log('Run loop waking up.');
 
-  if (await state.shouldSendTx()) { // TODO: tmp handling
-	  await state.periodicUpdate(config);
-  }
+  await state.periodicUpdate(config);
 
 }
 

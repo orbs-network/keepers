@@ -13,7 +13,7 @@ import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
 import {Configuration} from "./config";
-// import {EthereumTxStatus} from "./model/state";
+// import {EthereumcanSendTx} from "./model/state";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
@@ -28,7 +28,8 @@ export class Keeper {
     web3: Web3 | undefined;
     chainId: number | undefined;
     signer: Signer | undefined;
-    txHash: string [] ; // TODO: consider use EthereumTxStatus
+    pendingTx: {txHash: string | null, taskName: string | null, taskInterval: number | null};
+    nextTaskRun: { [taskName: string]: number};
 
     //////////////////////////////////////
     constructor() {
@@ -48,8 +49,9 @@ export class Keeper {
                 "BNB": 0
             }
         };
-		this.txHash = [];
 
+		this.nextTaskRun = {};
+		this.pendingTx = {txHash: null, taskName: null, taskInterval: null};
         // load all ABIs
         // Logger.log(`loading abis at ${abiFolder}`);
         // let files = ['./abi/revault-pool.json', './abi/revault-tvl.json'];
@@ -104,6 +106,9 @@ export class Keeper {
 
     //////////////////////////////////////
     async periodicUpdate(config: Configuration) {
+
+		if (!(await this.canSendTx())) return; // TODO: move after status update + proper handling of status update (1 min resolution)
+
         this.status.periodicUpdates += 1;
         const now = new Date();
         this.status.lastUpdateUTC = now.toUTCString();
@@ -124,8 +129,14 @@ export class Keeper {
 	    const senderAddress = `0x${config.NodeOrbsAddress}`;
 
 		for (const t of tasksObj.tasks) {
+
+			// TODO: add leader handling
+			if (!this.shouldSendTx(t.name)) {
+				continue;
+			}
             // first call - after that, task sets the next execution
             await this.exec(t, senderAddress);
+            if (!(await this.canSendTx())) return;
         }
     }
 
@@ -138,32 +149,54 @@ export class Keeper {
 
 	}
 
-	// TODO: tmp handling should be handled properly
-	async shouldSendTx() {
+	scheduleNextRun(taskName: string, taskInterval: number) {
+		this.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now()/taskInterval) + taskInterval;
+	}
+
+	shouldSendTx(taskName: string) {
+
+		if (!(taskName in Object.keys(this.nextTaskRun))) return true;
+		if (Date.now() >= this.nextTaskRun[taskName]) return true;
+		return false;
+	}
+
+	async canSendTx() {
 		if (!this.web3) throw new Error('Cannot send tx until web3 client is initialized.');
+		if (!this.pendingTx.txHash) return true;
 
-		for (const [i, txHash] of this.txHash.entries()) {
-			  console.log(`checking txHash: ${txHash}`);
-			  const tx = await this.web3.eth.getTransaction(txHash);
-			  if (tx == null || tx.blockNumber == null) {
-				Logger.log(`tx ${txHash} is still waiting for block.`);
-				return false; // still pending
-			  }
+		console.log(`checking txHash: ${this.pendingTx.txHash}`);
+		const tx = await this.web3.eth.getTransaction(this.pendingTx.txHash);
+		if (tx == null || tx.blockNumber == null) {
+			Logger.log(`tx ${this.pendingTx.txHash} is still waiting for block.`);
+			return false; // still pending
+	 	}
 
-			  const receipt = await this.web3.eth.getTransactionReceipt(txHash);
-			  if (receipt == null) {
-				Logger.log(`tx ${txHash} does not have receipt yet.`);
-				return false; // still pending
-			  }
+		const receipt = await this.web3.eth.getTransactionReceipt(this.pendingTx.txHash);
+		if (receipt == null) {
+			Logger.log(`tx ${this.pendingTx.txHash} does not have receipt yet.`);
+			return false; // still pending
+		  }
 
-			  this.txHash.splice(i, 1);
-		}
+		Logger.log(`available receipt for tx ${this.pendingTx.txHash}: ${JSON.stringify(receipt)}`);
+
+		if (this.pendingTx.taskName === null)
+			throw Error(`missing task name for ${this.pendingTx.txHash}`);
+
+		if (this.pendingTx.taskInterval === null)
+			throw Error(`missing task interval for ${this.pendingTx.taskInterval}`);
+
+		this.scheduleNextRun(this.pendingTx.taskName, this.pendingTx.taskInterval);
+
+		this.pendingTx.txHash = null;
+		this.pendingTx.taskName = null;
+		this.pendingTx.taskInterval = null;
 
 		return true;
 	}
 
     //////////////////////////////////////
     async signAndSendTransaction(
+    	task: any,
         encodedAbi: string,
         contractAddress: string,
 		senderAddress: string,
@@ -196,7 +229,9 @@ export class Keeper {
             throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
         }
 
-		this.txHash.push(transactionHash);
+		this.pendingTx.txHash = transactionHash;
+		this.pendingTx.taskName = task.name;
+		this.pendingTx.taskInterval = task.taskInterval;
 
         return new Promise<string>((resolve, reject) => {
             // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
@@ -217,7 +252,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(network: string, contract: any, method: string, params: any, senderAddress: string) {
+    async sendNetworkContract(task: any, network: string, contract: any, method: string, params: any, senderAddress: string) {
         const now = new Date();
         const dt = now.toISOString();
 
@@ -241,7 +276,7 @@ export class Keeper {
             encoded = contract.methods[method]().encodeABI();
         }
 
-        await this.signAndSendTransaction(encoded, contract.options.address, senderAddress).then(async (txhash) => {
+        await this.signAndSendTransaction(task, encoded, contract.options.address, senderAddress).then(async (txhash) => {
             this.status.successTX.push(tx);
             bi.txhash = txhash;
             // await biSend(config.BIUrl, bi);
@@ -278,11 +313,11 @@ export class Keeper {
             // has params
             if (send.params) {
                 for (let params of send.params) {
-                    await this.sendNetworkContract(network, contract, send.method, params, senderAddress);
+                    await this.sendNetworkContract(task, network, contract, send.method, params, senderAddress);
                 }
             } // no params
             else {
-                await this.sendNetworkContract(network, contract, send.method, null, senderAddress);
+                await this.sendNetworkContract(task, network, contract, send.method, null, senderAddress);
             }
         }
     }
