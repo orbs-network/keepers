@@ -14,6 +14,7 @@ import * as Logger from './logger';
 // import { biSend } from "./bi";
 import {Configuration} from "./config";
 // import {EthereumcanSendTx} from "./model/state";
+import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
@@ -31,6 +32,7 @@ export class Keeper {
     signer: Signer | undefined;
     pendingTx: {txHash: string | null, taskName: string | null, taskInterval: number | null};
     nextTaskRun: { [taskName: string]: number};
+	guardianAddress: string = '0x';
 
     //////////////////////////////////////
     constructor() {
@@ -105,6 +107,19 @@ export class Keeper {
         return this.status;
     }
 
+	async setGuardianAddr(config: Configuration) {
+		const management = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, this.status);
+
+		try {
+	    	// TODO:
+	    	this.guardianAddress = _.map(_.filter(management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress ), 'EthAddress')[0];
+			Logger.log(`guardian address was set to ${this.guardianAddress}`);
+		} catch (err) {
+			Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
+			return;
+ 		}
+
+	}
     //////////////////////////////////////
     async periodicUpdate(config: Configuration) {
 
@@ -126,9 +141,8 @@ export class Keeper {
 
         // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 	    const senderAddress = `0x${config.NodeOrbsAddress}`;
-	    const guardianAddress = management.Payload.Guardians[config.NodeOrbsAddress].EthAddress
 
-		if (!this.isLeader(management.Payload.CurrentCommittee, guardianAddress)) {
+		if (!this.isLeader(management.Payload.CurrentCommittee, this.guardianAddress)) {
 			Logger.log(`Node was not selected as a leader`);
 
 			this.nextTaskRun = {};

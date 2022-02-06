@@ -53,6 +53,7 @@ async function initializeState(config: Configuration): Promise<Keeper> {
   // const state = new State();
   await initWeb3Client(config.EthereumEndpoint, keeper);
   keeper.signer = new Signer(config.SignerEndpoint);
+  await keeper.setGuardianAddr(config);
   return keeper;
 }
 
