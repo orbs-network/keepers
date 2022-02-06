@@ -128,7 +128,7 @@ export class Keeper {
 	    const senderAddress = `0x${config.NodeOrbsAddress}`;
 
 		if (!this.isLeader(management.Payload.CurrentCommittee, config.NodeOrbsAddress)) {
-			Logger.log(`Node was not selected is a leader`);
+			Logger.log(`Node was not selected as a leader`);
 
 			this.nextTaskRun = {};
 			return;
@@ -143,14 +143,6 @@ export class Keeper {
             await this.exec(t, senderAddress);
         }
     }
-
-	async dbgTask(this: Keeper, senderAddress: string) {
-
-		for (const t of tasksObj.tasks) {
-            await this.exec(t, senderAddress);
-        }
-
-	}
 
 	isLeader(committee: Array<any>, address: string) : boolean {
 		 return this.currentLeader(committee).EthAddress === address;
