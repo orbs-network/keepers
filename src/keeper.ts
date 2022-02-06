@@ -132,6 +132,7 @@ export class Keeper {
 
 			// TODO: add leader handling
 			if (!this.shouldSendTx(t.name)) {
+				Logger.log(`skipping task ${t.name}`)
 				continue;
 			}
             // first call - after that, task sets the next execution
