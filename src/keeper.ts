@@ -126,8 +126,9 @@ export class Keeper {
 
         // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 	    const senderAddress = `0x${config.NodeOrbsAddress}`;
+	    const guardianAddress = management.Payload.Guardians[config.NodeOrbsAddress].EthAddress
 
-		if (!this.isLeader(management.Payload.CurrentCommittee, config.NodeOrbsAddress)) {
+		if (!this.isLeader(management.Payload.CurrentCommittee, guardianAddress)) {
 			Logger.log(`Node was not selected as a leader`);
 
 			this.nextTaskRun = {};
