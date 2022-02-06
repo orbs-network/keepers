@@ -70,7 +70,7 @@ export class Keeper {
         // });
     }
 
-    getUptime(): string {
+    getUptime(this: Keeper): string {
         // get total seconds between the times
         var delta = Math.abs(Date.now() - this.status.start) / 1000;
 
@@ -92,7 +92,7 @@ export class Keeper {
         return `${days} days : ${hours}:${minutes}:${seconds}`;
     }
     //////////////////////////////////////
-    getStatus(): any {
+    getStatus(this: Keeper): any {
         // keept last 5 tx
         if (this.status.successTX.length > MAX_LAST_TX) {
             this.status.successTX.length.shift();
@@ -105,7 +105,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async periodicUpdate(config: Configuration) {
+    async periodicUpdate(this: Keeper, config: Configuration) {
 
 		if (!(await this.canSendTx())) return; // TODO: move after status update + proper handling of status update (1 min resolution)
 
@@ -140,7 +140,7 @@ export class Keeper {
         }
     }
 
-	async dbgTask(senderAddress: string) {
+	async dbgTask(this: Keeper, senderAddress: string) {
 
 		for (const t of tasksObj.tasks) {
             // first call - after that, task sets the next execution
@@ -153,15 +153,15 @@ export class Keeper {
 	//
 	// }
 
-	scheduleNextRun(taskName: string, taskInterval: number) {
+	scheduleNextRun(this: Keeper, taskName: string, taskInterval: number) {
 		this.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now()/taskInterval) + taskInterval;
-		Logger.log(`scheduled next run for task ${taskName} to ${this.nextTaskRun[taskName]}`);
+		Logger.log(`scheduled next run for task ${taskName} to ${JSON.stringify(this.nextTaskRun[taskName])}`);
 	}
 
-	shouldSendTx(taskName: string) {
+	shouldSendTx(this: Keeper, taskName: string) {
 
 		if (!(taskName in Object.keys(this.nextTaskRun))) {
-			Logger.log(`task ${taskName} has not entry in nextTaskRun ${this.nextTaskRun}`);
+			Logger.log(`task ${taskName} has not entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
 			return true;
 		}
 
@@ -173,7 +173,7 @@ export class Keeper {
 		return false;
 	}
 
-	async canSendTx() {
+	async canSendTx(this: Keeper) {
 		if (!this.web3) throw new Error('Cannot send tx until web3 client is initialized.');
 		if (!this.pendingTx.txHash) return true;
 
@@ -209,6 +209,7 @@ export class Keeper {
 
     //////////////////////////////////////
     async signAndSendTransaction(
+		this: Keeper,
     	task: any,
         encodedAbi: string,
         contractAddress: string,
@@ -267,7 +268,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(task: any, network: string, contract: any, method: string, params: any, senderAddress: string) {
+    async sendNetworkContract(this: Keeper, task: any, network: string, contract: any, method: string, params: any, senderAddress: string) {
         const now = new Date();
         const dt = now.toISOString();
 
@@ -307,7 +308,7 @@ export class Keeper {
         });
     }
     //////////////////////////////////////
-    async execNetworkAddress(task: any, network: string, adrs: string, senderAddress: string) {
+    async execNetworkAddress(this: Keeper, task: any, network: string, adrs: string, senderAddress: string) {
         // resolve abi
         const abi = task.abi;
         if (!abi) {
@@ -337,13 +338,13 @@ export class Keeper {
         }
     }
     //////////////////////////////////////
-    async execNetwork(task: any, network: string, senderAddress: string) {
+    async execNetwork(this: Keeper, task: any, network: string, senderAddress: string) {
         for (let adrs of task.addresses) {
             await this.execNetworkAddress(task, network, adrs, senderAddress);
         }
     }
     //////////////////////////////////////
-    async exec(task: any,   senderAddress: string) {
+    async exec(this: Keeper, task: any,   senderAddress: string) {
 
         Logger.log(`execute task: ${task.name}`);
         if (!task.active) {
