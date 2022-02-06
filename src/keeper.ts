@@ -13,7 +13,6 @@ import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
 import {Configuration} from "./config";
-import * as net from "net";
 // import {EthereumcanSendTx} from "./model/state";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
