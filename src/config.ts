@@ -12,7 +12,7 @@ export interface Configuration {
 export const defaultConfiguration = {
   StatusJsonPath: './status/status.json',
   VirtualChainEndpointSchema: 'http://chain-{{ID}}:8080',
-  RunLoopPollTimeSeconds: 5 * 60,
+  RunLoopPollTimeSeconds: 2 * 60,
   OrbsReputationsContract: '_Committee',
   VchainUptimeRequiredSeconds: 5,
   VchainSyncThresholdSeconds: 5 * 60,

@@ -17,7 +17,7 @@ import {Configuration} from "./config";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const TASK_TIME_DIVISION_MILLI = 90 * 1000;
+const TASK_TIME_DIVISION_MIN = 5;
 
 //////////////////////////////////////
 export class Keeper {
@@ -149,7 +149,7 @@ export class Keeper {
 	}
 
 	currentLeader(committee: Array<any>) : any {
-		return committee[(TASK_TIME_DIVISION_MILLI * Math.floor(Date.now()/TASK_TIME_DIVISION_MILLI)) % committee.length];
+		return committee[(TASK_TIME_DIVISION_MIN * Math.floor(Math.floor(Date.now()/60000)/TASK_TIME_DIVISION_MIN)) % committee.length];
 	}
 
 	scheduleNextRun(this: Keeper, taskName: string, taskInterval: number) {
