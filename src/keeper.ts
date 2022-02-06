@@ -151,6 +151,7 @@ export class Keeper {
 
 	scheduleNextRun(taskName: string, taskInterval: number) {
 		this.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now()/taskInterval) + taskInterval;
+		Logger.log(`scheduled next run for task ${taskName} to ${this.nextTaskRun[taskName]}`);
 	}
 
 	shouldSendTx(taskName: string) {
