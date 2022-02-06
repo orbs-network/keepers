@@ -17,6 +17,7 @@ import {Configuration} from "./config";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
+// const TASK_TIME_DIVISION_MILLI = 90 * 1000;
 
 //////////////////////////////////////
 export class Keeper {
@@ -106,7 +107,7 @@ export class Keeper {
 
     //////////////////////////////////////
     async periodicUpdate(config: Configuration) {
-    	
+
         this.status.periodicUpdates += 1;
         const now = new Date();
         this.status.lastUpdateUTC = now.toUTCString();
@@ -145,7 +146,7 @@ export class Keeper {
 	}
 
 	// isLeader(index: number) {
-	//
+	// 	 TASK_TIME_DIVISION_MILLI * Math.floor(Date.now()/TASK_TIME_DIVISION_MILLI)
 	// }
 
 	scheduleNextRun(this: Keeper, taskName: string, taskInterval: number) {
