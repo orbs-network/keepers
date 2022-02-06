@@ -12,7 +12,7 @@
                 "method":"updateAllTvls"
             }],
             "minInterval":480,
-            "taskInterval": 480000
+            "taskInterval": 14400000
         },
         {
             "name":"revault-update-pool",
@@ -29,7 +29,7 @@
                 ]
             }],
             "minInterval":1440,
-            "taskInterval": 1440000
+            "taskInterval": 14400000
         }
     ]
 }
