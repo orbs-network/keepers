@@ -161,7 +161,7 @@ export class Keeper {
 	shouldSendTx(this: Keeper, taskName: string) {
 
 		if (!(taskName in Object.keys(this.nextTaskRun))) {
-			Logger.log(`task ${taskName} has not entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
+			Logger.log(`task ${taskName} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
 			return true;
 		}
 
