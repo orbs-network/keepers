@@ -105,7 +105,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async periodicUpdate(this: Keeper, config: Configuration) {
+    async periodicUpdate(config: Configuration) {
 
 		if (!(await this.canSendTx())) return; // TODO: move after status update + proper handling of status update (1 min resolution)
 
@@ -160,7 +160,7 @@ export class Keeper {
 
 	shouldSendTx(this: Keeper, taskName: string) {
 
-		if (!(taskName in Object.keys(this.nextTaskRun))) {
+		if (!(taskName in this.nextTaskRun)) {
 			Logger.log(`task ${taskName} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
 			return true;
 		}
