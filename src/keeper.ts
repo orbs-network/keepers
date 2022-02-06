@@ -13,6 +13,7 @@ import * as tasksObj from './tasks.json';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
 import {Configuration} from "./config";
+import * as net from "net";
 // import {EthereumcanSendTx} from "./model/state";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
@@ -268,9 +269,22 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    async sendNetworkContract(this: Keeper, task: any, network: string, contract: any, method: string, params: any, senderAddress: string) {
+    async sendContract(this: Keeper, task: any, senderAddress: string) {
+    	const network = task.network;
+    	const method = task.method;
+    	const params = task.params;
+		const abi = task.abi;
+		const addr = task.address
+
+        if (!abi) {
+            return console.error(`abi ${task.name} does not exist in folder`);
+        }
+
+        if (!this.web3) throw new Error('web3 client is not initialized.');
+
         const now = new Date();
         const dt = now.toISOString();
+		let contract = new this.web3.eth.Contract(abi, addr);
 
         const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
         let bi: any = {
@@ -307,42 +321,7 @@ export class Keeper {
             Logger.log('FAIL:' + tx);
         });
     }
-    //////////////////////////////////////
-    async execNetworkAddress(this: Keeper, task: any, network: string, adrs: string, senderAddress: string) {
-        // resolve abi
-        const abi = task.abi;
-        if (!abi) {
-            return console.error(`abi ${task.name} does not exist in folder`);
-        }
 
-        if (!this.web3) throw new Error('web3 client is not initialized.');
-
-        // resolve contract
-        // if (!(adrs in this.contracts)) {
-        //     this.contracts[adrs] = new this.web3.eth.Contract(abi, adrs);
-        // }
-
-        // const contract = this.contracts[adrs];
-		let contract = new this.web3.eth.Contract(abi, adrs);
-
-        for (let send of task.send) {
-            // has params
-            if (send.params) {
-                for (let params of send.params) {
-                    await this.sendNetworkContract(task, network, contract, send.method, params, senderAddress);
-                }
-            } // no params
-            else {
-                await this.sendNetworkContract(task, network, contract, send.method, null, senderAddress);
-            }
-        }
-    }
-    //////////////////////////////////////
-    async execNetwork(this: Keeper, task: any, network: string, senderAddress: string) {
-        for (let adrs of task.addresses) {
-            await this.execNetworkAddress(task, network, adrs, senderAddress);
-        }
-    }
     //////////////////////////////////////
     async exec(this: Keeper, task: any,   senderAddress: string) {
 
@@ -371,9 +350,8 @@ export class Keeper {
             // update before loop execution
             this.gasPrice = await this.web3.eth.getGasPrice();
 
-            for (let network of task.networks) {
-                await this.execNetwork(task, network, senderAddress);
-            }
+			await this.sendContract(task, senderAddress);
+
         } catch (e) {
             Logger.log(`Exception thrown from task: ${task.name}`);
             Logger.error(e);
