@@ -143,7 +143,6 @@ export class Keeper {
 	async dbgTask(this: Keeper, senderAddress: string) {
 
 		for (const t of tasksObj.tasks) {
-            // first call - after that, task sets the next execution
             await this.exec(t, senderAddress);
         }
 

@@ -56,7 +56,7 @@ async function initializeState(config: Configuration): Promise<Keeper> {
   return keeper;
 }
 
-
+//
 // async function test() {
 //
 // 	const config : Configuration = {
@@ -66,12 +66,14 @@ async function initializeState(config: Configuration): Promise<Keeper> {
 // 		"EthereumDiscountGasPriceFactor": 1,
 // 		"NodeOrbsAddress": "9f0988cd37f14dfe95d44cf21f9987526d6147ba",
 // 		"StatusJsonPath": './status/status.json',
-// 		"RunLoopPollTimeSeconds": 1,
-// 		"BIUrl": "http://logs.orbs.network:3001/putes/keepersew"
+// 		"RunLoopPollTimeSeconds": 60,
+// 		"BIUrl": "http://logs.orbs.network:3001/putes/keepersew",
 // 	}
 //
 // 	const keeper = await initializeState(config);
-// 	await keeper.dbgTask(`0x${config.OrbsNodeAddress}`);
+//     const periodicCall = keeper.periodicUpdate.bind(keeper);
+// 	await periodicCall(config);
+// 	await keeper.dbgTask(`0x${config.NodeOrbsAddress}`);
 //
 // }
 //
