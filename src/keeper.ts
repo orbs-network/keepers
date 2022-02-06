@@ -17,7 +17,7 @@ import {Configuration} from "./config";
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-// const TASK_TIME_DIVISION_MILLI = 90 * 1000;
+const TASK_TIME_DIVISION_MILLI = 90 * 1000;
 
 //////////////////////////////////////
 export class Keeper {
@@ -127,6 +127,13 @@ export class Keeper {
         // writeStatusToDisk(config.StatusJsonPath, this.status, config);
 	    const senderAddress = `0x${config.NodeOrbsAddress}`;
 
+		if (!this.isLeader(management.Payload.CurrentCommittee, config.NodeOrbsAddress)) {
+			Logger.log(`Node was not selected is a leader`);
+
+			this.nextTaskRun = {};
+			return;
+		}
+
 		for (const t of tasksObj.tasks) {
 
             if (!(await this.canSendTx())) return;
@@ -145,20 +152,25 @@ export class Keeper {
 
 	}
 
-	// isLeader(index: number) {
-	// 	 TASK_TIME_DIVISION_MILLI * Math.floor(Date.now()/TASK_TIME_DIVISION_MILLI)
-	// }
+	isLeader(committee: Array<any>, address: string) : boolean {
+		 return this.currentLeader(committee).EthAddress === address;
+	}
+
+	currentLeader(committee: Array<any>) : any {
+		return committee[(TASK_TIME_DIVISION_MILLI * Math.floor(Date.now()/TASK_TIME_DIVISION_MILLI)) % committee.length];
+	}
 
 	scheduleNextRun(this: Keeper, taskName: string, taskInterval: number) {
 		this.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now()/taskInterval) + taskInterval;
 		Logger.log(`scheduled next run for task ${taskName} to ${JSON.stringify(this.nextTaskRun[taskName])}`);
 	}
 
-	shouldSendTx(this: Keeper, taskName: string) {
+	shouldSendTx(this: Keeper, taskName: string, taskInterval: number) {
 
 		if (!(taskName in this.nextTaskRun)) {
 			Logger.log(`task ${taskName} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
-			return true;
+			this.scheduleNextRun(taskName, taskInterval);
+			return false;
 		}
 
 		if (Date.now() >= this.nextTaskRun[taskName]) {
