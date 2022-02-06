@@ -106,9 +106,7 @@ export class Keeper {
 
     //////////////////////////////////////
     async periodicUpdate(config: Configuration) {
-
-		if (!(await this.canSendTx())) return; // TODO: move after status update + proper handling of status update (1 min resolution)
-
+    	
         this.status.periodicUpdates += 1;
         const now = new Date();
         this.status.lastUpdateUTC = now.toUTCString();
@@ -130,14 +128,11 @@ export class Keeper {
 
 		for (const t of tasksObj.tasks) {
 
-			// TODO: add leader handling
-			if (!this.shouldSendTx(t.name)) {
-				Logger.log(`skipping task ${t.name}`);
-				continue;
-			}
+            if (!(await this.canSendTx())) return;
+			if (!this.shouldSendTx(t.name)) continue;
+
             // first call - after that, task sets the next execution
             await this.exec(t, senderAddress);
-            if (!(await this.canSendTx())) return;
         }
     }
 
