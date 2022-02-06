@@ -149,6 +149,10 @@ export class Keeper {
 
 	}
 
+	// isLeader(index: number) {
+	//
+	// }
+
 	scheduleNextRun(taskName: string, taskInterval: number) {
 		this.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now()/taskInterval) + taskInterval;
 		Logger.log(`scheduled next run for task ${taskName} to ${this.nextTaskRun[taskName]}`);
@@ -156,8 +160,16 @@ export class Keeper {
 
 	shouldSendTx(taskName: string) {
 
-		if (!(taskName in Object.keys(this.nextTaskRun))) return true;
-		if (Date.now() >= this.nextTaskRun[taskName]) return true;
+		if (!(taskName in Object.keys(this.nextTaskRun))) {
+			Logger.log(`task ${taskName} has not entry in nextTaskRun ${this.nextTaskRun}`);
+			return true;
+		}
+
+		if (Date.now() >= this.nextTaskRun[taskName]) {
+			Logger.log(`next slot run hit for ${taskName}`);
+			return true;
+		}
+
 		return false;
 	}
 
