@@ -2,3 +2,4 @@
 .version
 dist/
 node_modules/
+debugSigner.ts
