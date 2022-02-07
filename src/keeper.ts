@@ -18,7 +18,7 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss
+const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
 
 //////////////////////////////////////
 export class Keeper {

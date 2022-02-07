@@ -27,7 +27,6 @@ export async function runLoop(config: Configuration) {
       // writeStatusToDisk(config.StatusJsonPath, state);
 
       const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now()/runLoopPoolTimeMilli)* runLoopPoolTimeMilli) // align to tick interval
-
       await sleep(sleepTime); // TODO: move sleep to start of block
 
     } catch (err) {
