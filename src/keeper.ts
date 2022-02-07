@@ -155,7 +155,7 @@ export class Keeper {
 		for (const t of tasksObj.tasks) {
 
             if (!(await this.canSendTx())) return;
-			if (!this.shouldSendTx(t.name, t.taskInterval)) continue;
+			if (!this.shouldSendTx(t.name, t.taskInterval * 60000)) continue;
 
             // first call - after that, task sets the next execution
             await this.exec(t, senderAddress);
