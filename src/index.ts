@@ -41,6 +41,18 @@ export async function runLoop(config: Configuration) {
 async function runLoopTick(config: Configuration, state: Keeper) {
   Logger.log('Run loop waking up.');
 
+  // phase 1
+  // await readManagementStatus(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+  // split periodicUpdate into functions
+
+  // phase 2
+  // add status, abi etc.
+
+  // phase 3
+  // await readPendingTransactionStatus(state.EthereumLastElectionsTx, state, config);
+
+  // phase 4
+  // code opt. + cleanups
   const periodicCall = state.periodicUpdate.bind(state);
   await periodicCall(config);
 }

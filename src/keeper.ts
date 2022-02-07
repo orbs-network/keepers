@@ -18,7 +18,7 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const TASK_TIME_DIVISION_MIN = 90;
+const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss
 
 //////////////////////////////////////
 export class Keeper {
@@ -183,6 +183,8 @@ export class Keeper {
 			this.scheduleNextRun(taskName, taskInterval);
 			return false;
 		}
+
+		// TODO: add support: check if leader th is near and send tx
 
 		if (Date.now() >= this.nextTaskRun[taskName]) {
 			Logger.log(`next slot run hit for ${taskName}`);
