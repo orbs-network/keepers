@@ -13,6 +13,7 @@ export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
   // initialize status.json to make sure healthcheck passes from now on
   // writeStatusToDisk(config.StatusJsonPath, state);
+  const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
   for (;;) {
     try {
@@ -25,7 +26,9 @@ export async function runLoop(config: Configuration) {
       // write status.json file, we don't mind doing this often (2min)
       // writeStatusToDisk(config.StatusJsonPath, state);
 
-      await sleep(config.RunLoopPollTimeSeconds * 1000); // TODO: move sleep to start of block
+      const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now()/runLoopPoolTimeMilli)* runLoopPoolTimeMilli) // align to tick interval
+
+      await sleep(sleepTime); // TODO: move sleep to start of block
 
     } catch (err) {
       Logger.log('Exception thrown during runLoop, going back to sleep:');
