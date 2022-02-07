@@ -144,13 +144,14 @@ export class Keeper {
 
 		if (!this.isLeader(management.Payload.CurrentCommittee, this.guardianAddress)) {
 			Logger.log(`Node was not selected as a leader`);
+			const currLeader = this.currentLeader(management.Payload.CurrentCommittee).EthAddress;
+			Logger.log(`Current leader eth address: ${currLeader}`);
 
 			this.nextTaskRun = {};
 			return;
 		}
 
-		const currLeader = this.currentLeader(management.Payload.CurrentCommittee).EthAddress;
-		Logger.log(`Current leader eth address: ${currLeader}`);
+		Logger.log(`Node was selected as a leader`);
 
 		for (const t of tasksObj.tasks) {
 
