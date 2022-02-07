@@ -7,8 +7,8 @@ import {
   initWeb3Client,
 } from './write/ethereum';
 
-import { readManagementStatus2, setLeaderStatus } from './leader'
-import { Keeper, setLeader, canSendTx, shouldSendTx, execTask, setGuardianAddr } from './keeper';
+import { readManagementStatus2 } from './leader'
+import { Keeper, isLeader, canSendTx, shouldSendTx, execTask, setGuardianAddr, getBalance } from './keeper';
 import * as tasksObj from './tasks.json';
 
 export async function runLoop(config: Configuration) {
@@ -46,23 +46,18 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   Logger.log('Run loop waking up.');
 
   // phase 1
-  const management = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
-  state.management = management;
+  await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
 
   // split periodicUpdate into functions
 
   // sets leader index and name
-  setLeaderStatus(management.Payload.CurrentCommittee, state);
+  //setLeaderStatus(state); - DEPRECATED AMI
 
-  // balance
-  state.validEthAddress = `0x${state.status.myEthAddress}`;
-  if (!state.web3) throw new Error('web3 client is not initialized.');
-  state.status.balance.BNB = await state.web3.eth.getBalance(state.validEthAddress);
+  // balance 
+  await getBalance(state);
 
   // leader
-  setLeader(state);
-
-  if (!state.status.isLeader) return;
+  if (!isLeader(state)) return;
   Logger.log(`Node was selected as a leader`);
 
   // tasks execution  
@@ -75,6 +70,7 @@ async function runLoopTick(config: Configuration, state: Keeper) {
     await execTask(state, t, senderAddress);
   }
   // phase 2
+  // checnage Keepr.ts to State.ts
   // add status, abi etc.
 
   // phase 3

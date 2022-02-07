@@ -95,6 +95,13 @@ function getUptime(state: Keeper): string {
     return `${days} days : ${hours}:${minutes}:${seconds}`;
 }
 //////////////////////////////////////
+export async function getBalance(state: Keeper) {
+    state.validEthAddress = `0x${state.status.myEthAddress}`;
+    if (!state.web3) throw new Error('web3 client is not initialized.');
+
+    state.status.balance.BNB = await state.web3.eth.getBalance(state.validEthAddress);
+}
+//////////////////////////////////////
 export function setStatus(state: Keeper): any {
     // keept last 5 tx
     if (state.status.successTX.length > MAX_LAST_TX) {
@@ -119,26 +126,23 @@ export async function setGuardianAddr(state: Keeper, config: Configuration) {
 }
 
 //////////////////////////////////////////////////////////////////
-export function setLeader(state: Keeper) {
-    state.status.isLeader = isLeader(state.management.Payload.CurrentCommittee, state.guardianAddress);
+export function isLeader(state: Keeper) {
+    const committee = state.management.Payload.CurrentCommittee;
+    state.status.isLeader = currentLeader(committee).EthAddress === state.guardianAddress;
+
     if (!state.status.isLeader) {
         Logger.log(`Node was not selected as a leader`);
         const currLeader = currentLeader(state.management.Payload.CurrentCommittee).EthAddress;
         Logger.log(`Current leader eth address: ${currLeader}`);
 
         state.nextTaskRun = {};
-        return;
     }
+    return state.status.isLeader;
 }
 
 //////////////////////////////////////////////////////////////////
 function currentLeader(committee: Array<any>): any {
     return committee[Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length];
-}
-
-//////////////////////////////////////////////////////////////////
-function isLeader(committee: Array<any>, address: string): boolean {
-    return currentLeader(committee).EthAddress === address;
 }
 
 //////////////////////////////////////////////////////////////////
