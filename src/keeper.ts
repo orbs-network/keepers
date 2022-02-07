@@ -18,7 +18,7 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const TASK_TIME_DIVISION_MIN = 5;
+const TASK_TIME_DIVISION_MIN = 90;
 
 //////////////////////////////////////
 export class Keeper {
@@ -111,9 +111,9 @@ export class Keeper {
 		const management = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, this.status);
 
 		try {
-	    	// TODO:
 	    	this.guardianAddress = _.map(_.filter(management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress ), 'EthAddress')[0];
 			Logger.log(`guardian address was set to ${this.guardianAddress}`);
+
 		} catch (err) {
 			Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
 			return;
@@ -149,6 +149,9 @@ export class Keeper {
 			return;
 		}
 
+		const currLeader = this.currentLeader(management.Payload.CurrentCommittee).EthAddress;
+		Logger.log(`Current leader eth address: ${currLeader}`);
+
 		for (const t of tasksObj.tasks) {
 
             if (!(await this.canSendTx())) return;
@@ -164,7 +167,7 @@ export class Keeper {
 	}
 
 	currentLeader(committee: Array<any>) : any {
-		return committee[(TASK_TIME_DIVISION_MIN * Math.floor(Math.floor(Date.now()/60000)/TASK_TIME_DIVISION_MIN)) % committee.length];
+		return committee[Math.floor(Date.now()/ (TASK_TIME_DIVISION_MIN * 60000)) % committee.length];
 	}
 
 	scheduleNextRun(this: Keeper, taskName: string, taskInterval: number) {
