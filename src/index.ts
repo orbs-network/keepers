@@ -56,7 +56,7 @@ async function runLoopTick(config: Configuration, state: State) {
   // setLeaderStatus(state.ManagementCurrentCommittee, state);
 
   // balance
-  state.validEthAddress = `0x${state.status.myEthAddress}`;
+  // state.validEthAddress = `0x${state.status.myEthAddress}`;
   if (!state.web3) throw new Error('web3 client is not initialized.');
   // TODO:
   // state.status.balance.BNB = await state.web3.eth.getBalance(state.validEthAddress);
