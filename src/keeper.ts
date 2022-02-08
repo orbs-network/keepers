@@ -18,7 +18,7 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
+const EPOCH_DURATION_MINUTES = 10; //167; // prime number to reduce task miss and span guardians more equally
 
 //////////////////////////////////////
 export class Keeper {
@@ -167,8 +167,8 @@ export class Keeper {
 		 return this.currentLeader(committee).EthAddress === address;
 	}
 
-	currentLeader(committee: Array<any>) : any {
-		return committee[Math.floor(Date.now()/ (TASK_TIME_DIVISION_MIN * 60000)) % committee.length];
+	currentLeader(committee: Array<any>) : any { // currentLeader
+		return committee[Math.floor(Date.now()/ (EPOCH_DURATION_MINUTES * 60000)) % committee.length];
 	}
 
 	scheduleNextRun(this: Keeper, taskName: string, taskInterval: number) {
