@@ -1,5 +1,3 @@
-import { Keeper } from './keeper';
-
 import * as Logger from './logger';
 import { sleep } from './helpers';
 import { Configuration } from './config';
@@ -9,13 +7,17 @@ import {
   initWeb3Client,
 } from './write/ethereum';
 
+import { readManagementStatus2, setLeaderStatus } from './leader'
+import { Keeper, setLeader, canSendTx, shouldSendTx, execTask, setGuardianAddr } from './keeper';
+import * as tasksObj from './tasks.json';
+
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
   // initialize status.json to make sure healthcheck passes from now on
   // writeStatusToDisk(config.StatusJsonPath, state);
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
-  for (;;) {
+  for (; ;) {
     try {
       // rest (to make sure we don't retry too aggressively on exceptions)
       // await sleep(config.RunLoopPollTimeSeconds * 1000);
@@ -26,7 +28,7 @@ export async function runLoop(config: Configuration) {
       // write status.json file, we don't mind doing this often (2min)
       // writeStatusToDisk(config.StatusJsonPath, state);
 
-      const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now()/runLoopPoolTimeMilli)* runLoopPoolTimeMilli) // align to tick interval
+      const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
       await sleep(sleepTime); // TODO: move sleep to start of block
 
     } catch (err) {
@@ -44,9 +46,34 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   Logger.log('Run loop waking up.');
 
   // phase 1
-  // await readManagementStatus(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+  const management = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+  state.management = management;
+
   // split periodicUpdate into functions
 
+  // sets leader index and name
+  setLeaderStatus(management.Payload.CurrentCommittee, state);
+
+  // balance
+  state.validEthAddress = `0x${state.status.myEthAddress}`;
+  if (!state.web3) throw new Error('web3 client is not initialized.');
+  state.status.balance.BNB = await state.web3.eth.getBalance(state.validEthAddress);
+
+  // leader
+  setLeader(state);
+
+  if (!state.status.isLeader) return;
+  Logger.log(`Node was selected as a leader`);
+
+  // tasks execution  
+  const senderAddress = `0x${config.NodeOrbsAddress}`;
+  for (const t of tasksObj.tasks) {
+    if (!(await canSendTx(state))) return;
+    if (!shouldSendTx(state, t.name, t.taskInterval * 60000)) continue;
+
+    // first call - after that, task sets the next execution
+    await execTask(state, t, senderAddress);
+  }
   // phase 2
   // add status, abi etc.
 
@@ -54,21 +81,20 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   // await readPendingTransactionStatus(state.EthereumLastElectionsTx, state, config);
 
   // phase 4
-  // code opt. + cleanups
-  const periodicCall = state.periodicUpdate.bind(state);
-  await periodicCall(config);
+  // code opt. + cleanups  
 }
 
 // helpers
 
 async function initializeState(config: Configuration): Promise<Keeper> {
-  const keeper = new Keeper()
+  const state = new Keeper()
 
   // const state = new State();
-  await initWeb3Client(config.EthereumEndpoint, keeper);
-  keeper.signer = new Signer(config.SignerEndpoint);
-  await keeper.setGuardianAddr(config);
-  return keeper;
+  await initWeb3Client(config.EthereumEndpoint, state);
+  state.signer = new Signer(config.SignerEndpoint);
+  await setGuardianAddr(state, config);
+
+  return state;
 }
 
 //
