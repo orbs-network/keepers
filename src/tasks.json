@@ -8,7 +8,7 @@
             "address": "0xd7550285532f1642511b16Df858546F2593d638B",
 			"method":"updateAllTvls",
 		  	"params": null,
-            "taskInterval": 240
+            "taskInterval": 20
         },
         {
             "name":"revault-update-pool-0",
