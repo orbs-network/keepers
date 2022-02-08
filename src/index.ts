@@ -7,9 +7,11 @@ import {
   initWeb3Client,
 } from './write/ethereum';
 
-import { readManagementStatus2, setLeaderStatus } from './leader'
-import { Keeper, setLeader, canSendTx, shouldSendTx, execTask, setGuardianAddr } from './keeper';
+// import { setLeaderStatus } from './leader'
+import { readManagementStatus } from './read/management'
+import { isLeader, canSendTx, shouldSendTx, execTask } from './keeper';
 import * as tasksObj from './tasks.json';
+import { State } from './model/state';
 
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
@@ -42,32 +44,34 @@ export async function runLoop(config: Configuration) {
 }
 
 // runs every 2 minutes in prod, 1 second in tests
-async function runLoopTick(config: Configuration, state: Keeper) {
+async function runLoopTick(config: Configuration, state: State) {
   Logger.log('Run loop waking up.');
 
   // phase 1
-  const management = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
-  state.management = management;
+  await readManagementStatus(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
 
   // split periodicUpdate into functions
 
   // sets leader index and name
-  setLeaderStatus(management.Payload.CurrentCommittee, state);
+  // setLeaderStatus(state.ManagementCurrentCommittee, state);
 
   // balance
   state.validEthAddress = `0x${state.status.myEthAddress}`;
   if (!state.web3) throw new Error('web3 client is not initialized.');
-  state.status.balance.BNB = await state.web3.eth.getBalance(state.validEthAddress);
+  // TODO:
+  // state.status.balance.BNB = await state.web3.eth.getBalance(state.validEthAddress);
 
   // leader
-  setLeader(state);
+  // setLeader(state);
 
-  if (!state.status.isLeader) return;
+  if (!isLeader(state.ManagementCurrentCommittee, state.MyGuardianAddress)) return;
+
   Logger.log(`Node was selected as a leader`);
 
-  // tasks execution  
+  // tasks execution
   const senderAddress = `0x${config.NodeOrbsAddress}`;
   for (const t of tasksObj.tasks) {
+  	// TODO: taskInterval set to t.taskInterval *= 60000
     if (!(await canSendTx(state))) return;
     if (!shouldSendTx(state, t.name, t.taskInterval * 60000)) continue;
 
@@ -81,18 +85,17 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   // await readPendingTransactionStatus(state.EthereumLastElectionsTx, state, config);
 
   // phase 4
-  // code opt. + cleanups  
+  // code opt. + cleanups
 }
 
 // helpers
 
-async function initializeState(config: Configuration): Promise<Keeper> {
-  const state = new Keeper()
+async function initializeState(config: Configuration): Promise<State> {
+  const state = new State()
 
   // const state = new State();
   await initWeb3Client(config.EthereumEndpoint, state);
   state.signer = new Signer(config.SignerEndpoint);
-  await setGuardianAddr(state, config);
 
   return state;
 }

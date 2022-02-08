@@ -1,5 +1,6 @@
 import Web3 from "web3";
 // import { Contract } from 'web3-eth-contract';
+import { State } from './model/state';
 
 // import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
@@ -8,7 +9,6 @@ import { TxData } from "@ethereumjs/tx";
 import Signer from 'orbs-signer-client';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
-import { Configuration } from "./config";
 // import {EthereumcanSendTx} from "./model/state";
 import _ from 'lodash';
 
@@ -73,7 +73,7 @@ export class Keeper {
     }
 }
 //////////////////////////////////////
-function getUptime(state: Keeper): string {
+function getUptime(state: State): string {
     // get total seconds between the times
     var delta = Math.abs(Date.now() - state.status.start) / 1000;
 
@@ -95,7 +95,7 @@ function getUptime(state: Keeper): string {
     return `${days} days : ${hours}:${minutes}:${seconds}`;
 }
 //////////////////////////////////////
-export function setStatus(state: Keeper): any {
+export function setStatus(state: State): any {
     // keept last 5 tx
     if (state.status.successTX.length > MAX_LAST_TX) {
         state.status.successTX.length.shift();
@@ -106,21 +106,9 @@ export function setStatus(state: Keeper): any {
     state.status.uptime = getUptime(state);
 }
 
-//////////////////////////////////////
-export async function setGuardianAddr(state: Keeper, config: Configuration) {
-    try {
-        state.guardianAddress = _.map(_.filter(state.management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress), 'EthAddress')[0];
-        Logger.log(`guardian address was set to ${state.guardianAddress}`);
-
-    } catch (err) {
-        Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
-        return;
-    }
-}
-
 //////////////////////////////////////////////////////////////////
-export function setLeader(state: Keeper) {
-    state.status.isLeader = isLeader(state.management.Payload.CurrentCommittee, state.guardianAddress);
+export function setLeader(state: State) {
+    state.status.isLeader = isLeader(state.ManagementCurrentCommittee, state.MyGuardianAddress);
     if (!state.status.isLeader) {
         Logger.log(`Node was not selected as a leader`);
         const currLeader = currentLeader(state.management.Payload.CurrentCommittee).EthAddress;
@@ -131,28 +119,23 @@ export function setLeader(state: Keeper) {
     }
 }
 
-currentLeader(committee: Array<any>) : any { // currentLeader
+function currentLeader(committee: Array<any>) : any { // currentLeader
 		return committee[Math.floor(Date.now()/ (EPOCH_DURATION_MINUTES * 60000)) % committee.length];
 }
 
 //////////////////////////////////////////////////////////////////
-function currentLeader(committee: Array<any>): any {
-    return committee[Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length];
-}
-
-//////////////////////////////////////////////////////////////////
-function isLeader(committee: Array<any>, address: string): boolean {
+export function isLeader(committee: Array<any>, address: string): boolean {
     return currentLeader(committee).EthAddress === address;
 }
 
 //////////////////////////////////////////////////////////////////
-function scheduleNextRun(state: Keeper, taskName: string, taskInterval: number) {
+function scheduleNextRun(state: State, taskName: string, taskInterval: number) {
     state.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now() / taskInterval) + taskInterval;
     Logger.log(`scheduled next run for task ${taskName} to ${JSON.stringify(state.nextTaskRun[taskName])}`);
 }
 
 //////////////////////////////////////////////////////////////////
-export function shouldSendTx(state: Keeper, taskName: string, taskInterval: number) {
+export function shouldSendTx(state: State, taskName: string, taskInterval: number) {
 
     if (!(taskName in state.nextTaskRun)) {
         Logger.log(`task ${taskName} has no entry in nextTaskRun ${JSON.stringify(state.nextTaskRun)}`);
@@ -171,7 +154,7 @@ export function shouldSendTx(state: Keeper, taskName: string, taskInterval: numb
 }
 
 //////////////////////////////////////////////////////////////////
-export async function canSendTx(state: Keeper) {
+export async function canSendTx(state: State) {
     if (!state.web3) throw new Error('Cannot send tx until web3 client is initialized.');
     if (!state.pendingTx.txHash) return true;
 
@@ -207,7 +190,7 @@ export async function canSendTx(state: Keeper) {
 
 //////////////////////////////////////
 async function signAndSendTransaction(
-    state: Keeper,
+    state: State,
     task: any,
     encodedAbi: string,
     contractAddress: string,
@@ -243,7 +226,7 @@ async function signAndSendTransaction(
 
     state.pendingTx.txHash = transactionHash;
     state.pendingTx.taskName = task.name;
-    state.pendingTx.taskInterval = task.taskInterval;
+    state.pendingTx.taskInterval = task.taskInterval * 60000;
 
     Logger.log(`taskName ${state.pendingTx.taskName}, taskInterval ${state.pendingTx.taskInterval}, txHash ${state.pendingTx.txHash} was added to pendingTx`);
 
@@ -266,7 +249,7 @@ async function signAndSendTransaction(
 }
 
 //////////////////////////////////////
-async function sendContract(state: Keeper, task: any, senderAddress: string) {
+async function sendContract(state: State, task: any, senderAddress: string) {
     const network = task.network;
     const method = task.method;
     const params = task.params;
@@ -320,7 +303,7 @@ async function sendContract(state: Keeper, task: any, senderAddress: string) {
 }
 
 //////////////////////////////////////
-export async function execTask(state: Keeper, task: any, senderAddress: string) {
+export async function execTask(state: State, task: any, senderAddress: string) {
 
     Logger.log(`execute task: ${task.name}`);
     if (!task.active) {
