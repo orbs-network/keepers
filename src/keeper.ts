@@ -11,7 +11,9 @@ import * as Logger from './logger';
 import { biSend } from "./bi";
 import { Configuration } from "./config";
 import { readFileSync, readdirSync } from 'fs';
-import { debugSign } from "./debugSigner";
+
+//import { debugSign } from "./debugSigner";
+
 // import {EthereumcanSendTx} from "./model/state";
 import _ from 'lodash';
 
@@ -213,13 +215,13 @@ export async function canSendTx(state: Keeper) {
 
 //////////////////////////////////////
 async function sign(state: Keeper, txObject: TxData) {
-    if (process.env.DEBUG) {
-        Logger.log(`DEBUG mode - use debug signer`);
-        return debugSign(txObject);
-    }
-    else {
-        return await state.signer?.sign(txObject, state.chainId);
-    }
+    // if (process.env.DEBUG) {
+    //     Logger.log(`DEBUG mode - use debug signer`);
+    //     return debugSign(txObject);
+    // }
+    // else {
+    return await state.signer?.sign(txObject, state.chainId);
+    //}
 }
 //////////////////////////////////////
 async function signAndSendTransaction(
