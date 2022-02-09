@@ -11,6 +11,10 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
+            "env": {
+                "DEBUG": 1
+            },
+            "preLaunchTask": "npm: build:quick",
             "program": "${workspaceFolder}/dist/main.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"

@@ -1,24 +1,29 @@
 import * as Logger from './logger';
 import { sleep } from './helpers';
 import { Configuration } from './config';
-// import { writeStatusToDisk } from './write/status';
+import { writeStatusToDisk } from './write/status';
 import Signer from 'orbs-signer-client';
 import {
   initWeb3Client,
 } from './write/ethereum';
 
 import { readManagementStatus2 } from './leader'
-import { Keeper, isLeader, canSendTx, shouldSendTx, execTask, setGuardianAddr, getBalance } from './keeper';
-import * as tasksObj from './tasks.json';
+import { Keeper, isLeader, shouldExecTask, execTask, getBalance, canSendTx, setGuardianEthAddr } from './keeper';
+import * as tasksObj from './tasks_orig.json';
+//import { stat } from 'fs';
 
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
-  // initialize status.json to make sure healthcheck passes from now on
-  // writeStatusToDisk(config.StatusJsonPath, state);
+  // initialize status.json to make sure healthcheck passes from now on  
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
+
+  // has to be called before setGuardians for management
+  await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+  setGuardianEthAddr(state, config);
 
   for (; ;) {
     try {
+      writeStatusToDisk(config.StatusJsonPath, state.status);
       // rest (to make sure we don't retry too aggressively on exceptions)
       // await sleep(config.RunLoopPollTimeSeconds * 1000);
 
@@ -60,14 +65,14 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   if (!isLeader(state)) return;
   Logger.log(`Node was selected as a leader`);
 
-  // tasks execution  
-  const senderAddress = `0x${config.NodeOrbsAddress}`;
+  // tasks execution    
   for (const t of tasksObj.tasks) {
     if (!(await canSendTx(state))) return;
-    if (!shouldSendTx(state, t.name, t.taskInterval * 60000)) continue;
+    if (shouldExecTask(state, t)) {
 
-    // first call - after that, task sets the next execution
-    await execTask(state, t, senderAddress);
+      // first call - after that, task sets the next execution
+      await execTask(state, t);
+    }
   }
   // phase 2
   // checnage Keepr.ts to State.ts
@@ -88,7 +93,8 @@ async function initializeState(config: Configuration): Promise<Keeper> {
   // const state = new State();
   await initWeb3Client(config.EthereumEndpoint, state);
   state.signer = new Signer(config.SignerEndpoint);
-  await setGuardianAddr(state, config);
+  state.status.config = config;
+  //await setGuardianAddr(state, config);
 
   return state;
 }

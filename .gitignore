@@ -2,4 +2,6 @@
 .version
 dist/
 node_modules/
+status/
+status.json
 debugSigner.ts
