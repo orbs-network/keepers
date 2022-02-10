@@ -1,4 +1,4 @@
-import * as Logger from '../logger';
+//import * as Logger from '../logger';
 //import { State } from '../model/state';
 import { writeFileSync } from 'fs';
 import { ensureFileDirectoryExists } from '../helpers';//, JsonResponse, getCurrentClockTime, getTenDayPeriod }  ;
@@ -60,7 +60,7 @@ export function writeStatusToDisk(filePath: string, state: any) {
   writeFileSync(filePath, content);
 
   // log progress
-  Logger.log(`Wrote status JSON to ${filePath} (${content.length} bytes).`);
+  //Logger.log(`Wrote status JSON to ${filePath} (${content.length} bytes).`);
 }
 
 // helpers
