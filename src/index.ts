@@ -8,7 +8,7 @@ import {
 } from './write/ethereum';
 
 import { readManagementStatus2 } from './leader'
-import { Keeper, isLeader, shouldExecTask, execTask, getBalance, canSendTx, setGuardianEthAddr } from './keeper';
+import { Keeper, isLeader, shouldExecTask, execTask, getBalance, canSendTx, setGuardianEthAddr, setStatus } from './keeper';
 import * as tasksObj from './tasks_orig.json';
 //import { stat } from 'fs';
 
@@ -20,9 +20,12 @@ export async function runLoop(config: Configuration) {
   // has to be called before setGuardians for management
   await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
   setGuardianEthAddr(state, config);
+  // make sure tasks are visible in svc status
+  state.status.tasks = tasksObj;
 
   for (; ;) {
     try {
+      setStatus(state);
       writeStatusToDisk(config.StatusJsonPath, state.status);
       // rest (to make sure we don't retry too aggressively on exceptions)
       // await sleep(config.RunLoopPollTimeSeconds * 1000);
@@ -48,7 +51,10 @@ export async function runLoop(config: Configuration) {
 
 // runs every 2 minutes in prod, 1 second in tests
 async function runLoopTick(config: Configuration, state: Keeper) {
-  Logger.log('Run loop waking up.');
+  if (state.status.tickCount % 10 === 0)
+    Logger.log(`Run loop waking up. tick: ${state.status.tickCount}`);
+
+  state.status.tickCount += 1;
 
   // phase 1
   await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
