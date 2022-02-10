@@ -44,18 +44,17 @@ export class Keeper {
         this.gasPrice = '';
         this.status = {
             start: Date.now(),
+            tickCount: 0,
             isLeader: Boolean,
-            successTX: [],
-            failedTX: [],
-            periodicUpdates: 0,
-            lastUpdate: '',
             leaderIndex: -1,
             leaderName: '',
+            successTX: [],
+            failTX: [],
+            lastUpdate: '',
             balance: {
                 "BNB": 0
             }
         };
-
         this.nextTaskRun = {};
         this.pendingTx = { txHash: null, taskName: null, minInterval: null };
         // load all ABIs
@@ -107,9 +106,11 @@ export function setStatus(state: Keeper): any {
         state.status.successTX.length.shift();
     }
     if (state.status.failTX.length > MAX_LAST_TX) {
-        state.status.successTX.length.shift();
+        state.status.failTX.length.shift();
     }
     state.status.uptime = getUptime(state);
+    const now = new Date();
+    state.status.lastUpdateUTC = now.toUTCString();
 }
 
 //////////////////////////////////////
@@ -129,17 +130,39 @@ export async function setGuardianEthAddr(state: Keeper, config: Configuration) {
 
 //////////////////////////////////////////////////////////////////
 export function isLeader(state: Keeper) {
-    if (process.env.DEBUG) {
-        Logger.log(`DEBUG mode - Always selected as leader`);
-        return true;
-    }
+    // if (process.env.DEBUG) {
+    //     Logger.log(`DEBUG mode - Always selected as leader`);
+    //     return true;
+    // }
     const committee = state.management.Payload.CurrentCommittee;
-    state.status.isLeader = currentLeader(committee).EthAddress === state.guardianAddress;
+    const leaderIndex = currentLeaderIndex(committee);
+
+    // same leader dont change
+    if (leaderIndex === state.status.leaderIndex)
+        return;
+
+    // replace leader
+    const leader = committee[leaderIndex];
+    state.status.leaderIndex = leaderIndex;
+    state.status.leaderName = leader.Name;
+    state.status.leaderEthAddress = leader.EthAddress;
+
+    Logger.log(`leader changed: ${leader.Name} ${leader.EthAddress}`);
+
+    // M I the leader?
+    state.status.isLeader = leader.EthAddress === state.guardianAddress;
+
+    // send bi
+    let bi: any = {
+        type: 'leaderChanged',
+        nodeName: state.status.myNode.Name,
+        leaderIndex: leaderIndex,
+        leaderName: leader.Name,
+        leaderEthAddress: leader.EthAddress
+    }
+    biSend(state.status.config.BIUrl, bi);
 
     if (!state.status.isLeader) {
-        Logger.log(`Node was not selected as a leader`);
-        const currLeader = currentLeader(state.management.Payload.CurrentCommittee).EthAddress;
-        Logger.log(`Current leader eth address: ${currLeader}`);
 
         state.nextTaskRun = {};
     }
@@ -147,8 +170,8 @@ export function isLeader(state: Keeper) {
 }
 
 //////////////////////////////////////////////////////////////////
-function currentLeader(committee: Array<any>): any {
-    return committee[Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length];
+function currentLeaderIndex(committee: Array<any>): any {
+    return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -325,7 +348,7 @@ async function sendContract(state: Keeper, task: any, senderAddress: string) {
         Logger.log('SUCCESS:' + tx);
 
     }).catch(async (err: Error) => {
-        state.status.failedTX.push(tx);
+        state.status.failTX.push(tx);
         bi.success = false;
         bi.error = err.message;
         await biSend(state.status.config.BIUrl, bi);
@@ -347,9 +370,9 @@ export async function execTask(state: Keeper, task: any) {
     let bi: any = {
         type: 'execTask',
         name: task.name,
+        nodeName: state.status.myNode.Name,
         network: task.networks[0],
         minInterval: task.minInterval,
-        nodeName: state.status.myNode.Name,
     }
     await biSend(state.status.config.BIUrl, bi);
 
