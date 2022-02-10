@@ -59,11 +59,6 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   // phase 1
   await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
 
-  // split periodicUpdate into functions
-
-  // sets leader index and name
-  //setLeaderStatus(state); - DEPRECATED AMI
-
   // balance 
   await getBalance(state);
 
