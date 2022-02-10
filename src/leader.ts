@@ -10,7 +10,7 @@ export async function readManagementStatus2(endpoint: string, myOrbsAddress: str
     state.status.ManagementRefTime = response.Payload.CurrentRefTime;
     state.status.ManagementEthRefBlock = response.Payload.CurrentRefBlock;
     //status.ManagementVirtualChains = response.Payload.CurrentVirtualChains;
-    state.status.ManagementCurrentCommittee = response.Payload.CurrentCommittee;
+    // no need state.status.ManagementCurrentCommittee = response.Payload.CurrentCommittee;
     //status.ManagementCurrentStandbys = _.filter(response.Payload.CurrentCandidates, (node) => node.IsStandby);
     //status.ManagementCurrentTopology = response.Payload.CurrentTopology;
     state.status.ManagementEthToOrbsAddress = _.mapValues(response.Payload.Guardians, (node) => node.OrbsAddress);
