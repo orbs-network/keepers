@@ -1,7 +1,7 @@
 {
   "name": "@orbs-network/keepers",
   "private": true,
-  "version": "1.0.49",
+  "version": "1.0.0",
   "description": "Node service to send Ethereum transactions for elections lifecycle (like auto vote unready)",
   "author": "Tal Kol <talkol@gmail.com>",
   "license": "MIT",
