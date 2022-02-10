@@ -214,15 +214,15 @@ export async function canSendTx(state: Keeper) {
 }
 
 //////////////////////////////////////
-async function sign(state: Keeper, txObject: TxData) {
-    // if (process.env.DEBUG) {
-    //     Logger.log(`DEBUG mode - use debug signer`);
-    //     return debugSign(txObject);
-    // }
-    // else {
-    return await state.signer?.sign(txObject, state.chainId);
-    //}
-}
+// async function sign(state: Keeper, txObject: TxData) {
+//     // if (process.env.DEBUG) {
+//     //     Logger.log(`DEBUG mode - use debug signer`);
+//     //     return debugSign(txObject);
+//     // }
+//     // else {
+//     return await state.signer?.sign(txObject, state.chainId);
+//     //}
+// }
 //////////////////////////////////////
 async function signAndSendTransaction(
     state: Keeper,
@@ -248,7 +248,8 @@ async function signAndSendTransaction(
 
     Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
 
-    const { rawTransaction, transactionHash } = await sign(state, txObject);
+    const { rawTransaction, transactionHash } = await state.signer?.sign(txObject, state.chainId);
+    //const { rawTransaction, transactionHash } = await sign(state, txObject);
 
     if (!rawTransaction || !transactionHash) {
         throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
