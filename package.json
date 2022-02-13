@@ -42,7 +42,6 @@
     "bn.js": "^5.1.1",
     "child-process-promise": "^2.2.1",
     "docker-compose-mocha": "^1.2.0",
-    "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.1",
     "husky": "^7.0.4",
     "mock-fs": "^4.11.0",
