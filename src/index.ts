@@ -21,7 +21,7 @@ export async function runLoop(config: Configuration) {
       // has to be called before setGuardians for management
       const statusOK = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
       if (!statusOK) {
-        Logger.error(`readManagementStatus2 failed, url=${config.ManagementServiceEndpoin}`);
+        Logger.error(`readManagementStatus2 failed, url=${config.ManagementServiceEndpoint}`);
         continue;
       }
 

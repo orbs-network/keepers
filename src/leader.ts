@@ -2,8 +2,26 @@ import _ from 'lodash';
 import { fetchManagementStatus } from "./read/management";
 import { findEthFromOrbsAddress } from './model/helpers';
 import { getCurrentClockTime } from './helpers';
+// import { sleep } from './helpers';
+// import * as Logger from './logger';
+// import urlExist from 'url-exist';
 
-export async function readManagementStatus2(endpoint: string, myOrbsAddress: string, state: any): Promise<any> {
+
+// export async function waitForEndpoint(endpoint: string, secs: number): Promise<Boolean> {
+//     Logger.log(`watitng for ${endpoint} for ${secs} seconds`);
+
+//     for (let i = 0; i < secs; i++) {
+//         Logger.log(`call urlExist Attempt #${i}`)
+//         const exists = await urlExist(endpoint);
+//         if (exists)
+//             return true;
+
+//         Logger.log(`sleep 1 sec`);
+//         await sleep(1000);
+//     }
+//     return false
+// }
+export async function readManagementStatus2(endpoint: string, myOrbsAddress: string, state: any): Promise<Boolean> {
     const url = `${endpoint}/status`;
     const response = await fetchManagementStatus(url);
 
@@ -26,6 +44,7 @@ export async function readManagementStatus2(endpoint: string, myOrbsAddress: str
     // last to be after all possible exceptions and processing delays
     state.status.ManagementLastPollTime = getCurrentClockTime();
     state.management = response;
+    return true;
 }
 
 // export function setLeaderStatus(committee: Array<any>, status: any) {
