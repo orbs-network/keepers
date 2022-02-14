@@ -10,34 +10,36 @@ import {
 import { readManagementStatus2 } from './leader'
 import { Keeper, isLeader, shouldExecTask, execTask, getBalance, canSendTx, setGuardianEthAddr, setStatus } from './keeper';
 import * as tasksObj from './tasks_orig.json';
-//import { stat } from 'fs';
 
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
   // initialize status.json to make sure healthcheck passes from now on  
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
-  // has to be called before setGuardians for management
-  await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
-  setGuardianEthAddr(state, config);
-  // make sure tasks are visible in svc status
-  state.status.tasks = tasksObj;
-
   for (; ;) {
     try {
+      // has to be called before setGuardians for management
+      const statusOK = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+      if (!statusOK) {
+        Logger.error(`readManagementStatus2 failed, url=${config.ManagementServiceEndpoin}`);
+        continue;
+      }
+
+      setGuardianEthAddr(state, config);
+      // make sure tasks are visible in svc status
+      state.status.tasks = tasksObj;
+
+      // updates the json
       setStatus(state);
+      // write status.json file, we don't mind doing this often (2min)
       writeStatusToDisk(config.StatusJsonPath, state.status);
-      // rest (to make sure we don't retry too aggressively on exceptions)
-      // await sleep(config.RunLoopPollTimeSeconds * 1000);
 
       // main business logic
       await runLoopTick(config, state);
 
-      // write status.json file, we don't mind doing this often (2min)
-      // writeStatusToDisk(config.StatusJsonPath, state);
-
+      // SLEEP 2 minutes
       const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
-      await sleep(sleepTime); // TODO: move sleep to start of block
+      await sleep(sleepTime);
 
     } catch (err) {
       Logger.log('Exception thrown during runLoop, going back to sleep:');
