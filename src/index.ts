@@ -16,6 +16,8 @@ export async function runLoop(config: Configuration) {
   // initialize status.json to make sure healthcheck passes from now on
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
+	Logger.log('test');
+	
   for (; ;) {
     try {
       // has to be called before setGuardians for management
