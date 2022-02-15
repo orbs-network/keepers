@@ -16,9 +16,6 @@ export async function runLoop(config: Configuration) {
   // initialize status.json to make sure healthcheck passes from now on
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
-	await sleep(5000);
-	throw Error('test failure on run loop');
-
   for (; ;) {
     try {
       // has to be called before setGuardians for management
