@@ -13,8 +13,11 @@ import * as tasksObj from './tasks_orig.json';
 
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
-  // initialize status.json to make sure healthcheck passes from now on  
+  // initialize status.json to make sure healthcheck passes from now on
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
+
+	await sleep(5000);
+	throw Error('test failure on run loop');
 
   for (; ;) {
     try {
@@ -61,14 +64,14 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   // phase 1
   await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
 
-  // balance 
+  // balance
   await getBalance(state);
 
   // leader
   if (!isLeader(state)) return;
   Logger.log(`Node was selected as a leader`);
 
-  // tasks execution    
+  // tasks execution
   for (const t of tasksObj.tasks) {
     if (!(await canSendTx(state))) return;
     if (shouldExecTask(state, t)) {
@@ -85,7 +88,7 @@ async function runLoopTick(config: Configuration, state: Keeper) {
   // await readPendingTransactionStatus(state.EthereumLastElectionsTx, state, config);
 
   // phase 4
-  // code opt. + cleanups  
+  // code opt. + cleanups
 }
 
 // helpers
