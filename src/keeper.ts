@@ -125,7 +125,9 @@ function currentLeader(committee: Array<any>) : any { // currentLeader
 
 //////////////////////////////////////////////////////////////////
 export function isLeader(committee: Array<any>, address: string): boolean {
-    return currentLeader(committee).EthAddress === address;
+	const currentLeaderInfo = currentLeader(committee);
+	Logger.log(`currentLeaderInfo: ${JSON.stringify(currentLeaderInfo)}`);
+    return currentLeaderInfo.EthAddress === address;
 }
 
 //////////////////////////////////////////////////////////////////
