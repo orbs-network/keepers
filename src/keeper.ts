@@ -42,7 +42,7 @@ export class Keeper {
             start: Date.now(),
             isLeader: Boolean,
             successTX: [],
-            failedTX: [],
+            //failedTX: [],
             periodicUpdates: 0,
             lastUpdate: '',
             leaderIndex: -1,
@@ -119,14 +119,14 @@ export function setLeader(state: State) {
     }
 }
 
-function currentLeader(committee: Array<any>) : any { // currentLeader
-		return committee[Math.floor(Date.now()/ (EPOCH_DURATION_MINUTES * 60000)) % committee.length];
+function currentLeader(committee: Array<any>): any { // currentLeader
+    return committee[Math.floor(Date.now() / (EPOCH_DURATION_MINUTES * 60000)) % committee.length];
 }
 
 //////////////////////////////////////////////////////////////////
 export function isLeader(committee: Array<any>, address: string): boolean {
-	const currentLeaderInfo = currentLeader(committee);
-	Logger.log(`currentLeaderInfo: ${JSON.stringify(currentLeaderInfo)}`);
+    const currentLeaderInfo = currentLeader(committee);
+    Logger.log(`currentLeaderInfo: ${JSON.stringify(currentLeaderInfo)}`);
     return currentLeaderInfo.EthAddress === address;
 }
 
@@ -295,12 +295,12 @@ async function sendContract(state: State, task: any, senderAddress: string) {
         Logger.log('SUCCESS:' + tx);
 
     }).catch(async (err: Error) => {
-        state.status.failedTX.push(tx);
         bi.success = false;
         bi.error = err.message;
         // await biSend(config.BIUrl, bi);
         Logger.error('signAndSendTransaction exception: ' + err.message);
         Logger.log('FAIL:' + tx);
+        //state!.status!.failedTX.push(tx);
     });
 }
 
