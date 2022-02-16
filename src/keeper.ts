@@ -14,7 +14,7 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
-const EPOCH_DURATION_MINUTES = 10; //167; // prime number to reduce task miss and span guardians more equally
+const EPOCH_DURATION_MINUTES = 13; //167; // prime number to reduce task miss and span guardians more equally
 
 //////////////////////////////////////
 export class Keeper {
@@ -97,10 +97,10 @@ function getUptime(state: State): string {
 //////////////////////////////////////
 export function setStatus(state: State): any {
     // keept last 5 tx
-    if (state.status.successTX.length > MAX_LAST_TX) {
+    if (state.status?.successTX.length > MAX_LAST_TX) {
         state.status.successTX.length.shift();
     }
-    if (state.status.failTX.length > MAX_LAST_TX) {
+    if (state.status?.failTX.length > MAX_LAST_TX) {
         state.status.successTX.length.shift();
     }
     state.status.uptime = getUptime(state);
