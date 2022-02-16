@@ -5,16 +5,12 @@ import Web3 from "web3";
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
 import { AbiItem } from "web3-utils"
-
+//import { Contract } from 'web3-eth-contract';
 import Signer from 'orbs-signer-client';
 import * as Logger from './logger';
 import { biSend } from "./bi";
 import { Configuration } from "./config";
 import { readFileSync, readdirSync } from 'fs';
-
-//import { debugSign } from "./debugSigner";
-
-// import {EthereumcanSendTx} from "./model/state";
 import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
@@ -25,22 +21,23 @@ const abiFolder = process.cwd() + '/abi/';
 //////////////////////////////////////
 export class Keeper {
     public abis: { [key: string]: AbiItem[] };
-    // private contracts: { [key: string]: Contract};
+    public contracts: { [key: string]: any };
     public status: any;
     public management: any;
     public gasPrice: string | undefined;
 
-    web3: Web3 | undefined;
+    public web3: Web3 | undefined;
     chainId: number | undefined;
     signer: Signer | undefined;
-    pendingTx: { txHash: string | null, taskName: string | null, minInterval: number | null };
     nextTaskRun: { [taskName: string]: number };
     guardianAddress: string = '0x';
+    senderOrbsAddress: string = '0x';
+
 
     //////////////////////////////////////
     constructor() {
         this.abis = {};
-        // this.contracts = {};
+        this.contracts = {};
         this.gasPrice = '';
         this.status = {
             start: Date.now(),
@@ -55,8 +52,9 @@ export class Keeper {
                 "BNB": 0
             }
         };
+
         this.nextTaskRun = {};
-        this.pendingTx = { txHash: null, taskName: null, minInterval: null };
+        //this.pendingTx = { txHash: null, taskName: null, minInterval: null };
         // load all ABIs
         Logger.log(`loading abis at ${abiFolder}`);
 
@@ -117,6 +115,7 @@ export function setStatus(state: Keeper): any {
 export async function setGuardianEthAddr(state: Keeper, config: Configuration) {
     // save config in status
     state.status.config = config;
+    state.senderOrbsAddress = `0x${config.NodeOrbsAddress}`;
 
     try {
         state.guardianAddress = _.map(_.filter(state.management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress), 'EthAddress')[0];
@@ -130,10 +129,10 @@ export async function setGuardianEthAddr(state: Keeper, config: Configuration) {
 
 //////////////////////////////////////////////////////////////////
 export function isLeader(state: Keeper) {
-    // if (process.env.DEBUG) {
-    //     Logger.log(`DEBUG mode - Always selected as leader`);
-    //     return true;
-    // }
+    if (process.env.DEBUG) {
+        Logger.log(`DEBUG mode - Always selected as leader`);
+        return true;
+    }
     const committee = state.management.Payload.CurrentCommittee;
     const leaderIndex = currentLeaderIndex(committee);
 
@@ -184,7 +183,6 @@ function scheduleNextRun(state: Keeper, taskName: string, minInterval: number) {
 
 //////////////////////////////////////////////////////////////////
 export function shouldExecTask(state: Keeper, task: any) {
-
     if (!(task.name in state.nextTaskRun)) {
         Logger.log(`task ${task.name} has no entry in nextTaskRun ${JSON.stringify(state.nextTaskRun)}`);
         scheduleNextRun(state, task.name, task.minInterval);
@@ -201,39 +199,51 @@ export function shouldExecTask(state: Keeper, task: any) {
     return false;
 }
 
-//////////////////////////////////////////////////////////////////
-export async function canSendTx(state: Keeper) {
-    if (!state.web3) throw new Error('Cannot send tx until web3 client is initialized.');
-    if (!state.pendingTx.txHash) return true;
-
-    console.log(`checking txHash: ${state.pendingTx.txHash}`);
-    const tx = await state.web3.eth.getTransaction(state.pendingTx.txHash);
+async function isTXPending(web3: Web3 | undefined, txHash: string): Promise<boolean> {
+    Logger.log(`checking txHash: ${txHash}`);
+    const tx = await web3!.eth.getTransaction(txHash);
     if (tx == null || tx.blockNumber == null) {
-        Logger.log(`tx ${state.pendingTx.txHash} is still waiting for block.`);
-        return false; // still pending
+        Logger.log(`tx ${txHash} is still waiting for block.`);
+        return true; // still pending
     }
 
-    const receipt = await state.web3.eth.getTransactionReceipt(state.pendingTx.txHash);
+    const receipt = await web3!.eth.getTransactionReceipt(txHash);
     if (receipt == null) {
-        Logger.log(`tx ${state.pendingTx.txHash} does not have receipt yet.`);
-        return false; // still pending
+        Logger.log(`tx ${txHash} does not have receipt yet.`);
+        return true; // still pending
     }
 
-    Logger.log(`available receipt for tx ${state.pendingTx.txHash}: ${JSON.stringify(receipt)}`);
+    Logger.log(`available receipt for tx ${txHash}: ${JSON.stringify(receipt)}`);
+    return false;
 
-    if (state.pendingTx.taskName === null)
-        throw Error(`missing task name for ${state.pendingTx.txHash}`);
+}
+//////////////////////////////////////////////////////////////////
+export async function hasPendingTX(state: Keeper, task: any): Promise<boolean> {
+    // creating pending tx set
+    if (!task.pendingTX) {
+        task.pendingTX = new Set<string>();
+        return false;
+    }
+    let hasPending = false;
+    let completed: Array<string> = [];
+    for (let txHash in task.pendingTX) {
+        // if already has pending dont continue
+        if (await isTXPending(state.web3, txHash)) {
+            hasPending = true;
+        } else {
+            completed.push(txHash);
+        }
+    }
+    // remove completed
+    for (let txHash in completed) {
+        var index = task.pendingTX.indexOf(txHash);
+        if (index !== -1) {
+            task.pendingTX[index].splice(index, 1);
+        }
+    }
 
-    if (!state.pendingTx.minInterval)
-        throw Error(`missing task interval for ${state.pendingTx.minInterval}`);
-
-    scheduleNextRun(state, state.pendingTx.taskName, state.pendingTx.minInterval);
-
-    state.pendingTx.txHash = null;
-    state.pendingTx.taskName = null;
-    state.pendingTx.minInterval = null;
-
-    return true;
+    //cleanup completed
+    return hasPending;
 }
 
 //////////////////////////////////////
@@ -249,11 +259,12 @@ export async function canSendTx(state: Keeper) {
 //////////////////////////////////////
 async function signAndSendTransaction(
     state: Keeper,
-    task: any,
+    //task: any,
     encodedAbi: string,
     contractAddress: string,
-    senderAddress: string,
+    //senderAddress: string,
 ): Promise<string> {
+    const senderAddress = state.senderOrbsAddress;
     const web3 = state.web3;
     if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
     if (!state.signer) throw new Error('Cannot send tx until signer is initialized.');
@@ -278,12 +289,6 @@ async function signAndSendTransaction(
         throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
     }
 
-    state.pendingTx.txHash = transactionHash;
-    state.pendingTx.taskName = task.name;
-    state.pendingTx.minInterval = task.minInterval;
-
-    Logger.log(`taskName ${state.pendingTx.taskName}, minInterval ${state.pendingTx.minInterval}, txHash ${state.pendingTx.txHash} was added to pendingTx`);
-
     return new Promise<string>((resolve, reject) => {
         // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
         web3.eth
@@ -303,30 +308,21 @@ async function signAndSendTransaction(
 }
 
 //////////////////////////////////////
-async function sendContract(state: Keeper, task: any, senderAddress: string) {
-    // TODO: resume dynamic exec
-    const network = task.networks[0];
-    const method = task.send[0].method;
-    const params = task.send[0].params ? task.send[0].params[0] : null;
-    //const abi = task.abi; AMIs
-    const addr = task.addresses[0];
-    const abi = state.abis[task.abi];
-    if (!abi) {
-        throw new Error(`abi ${task.name} does not exist in folder`);
-    }
+//async function sendContract(state: Keeper, task: any, senderAddress: string) {
+async function sendNetworkContract(state: Keeper, task: any, network: string, contract: any, method: string, params: any) {
 
     if (!state.web3) throw new Error('web3 client is not initialized.');
 
     const now = new Date();
     const dt = now.toISOString();
-    let contract = new state.web3.eth.Contract(abi, addr);
+    //let contract = new state.web3.eth.Contract(abi, addr);
     const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
 
     let bi: any = {
         type: 'sendTX',
         nodeName: state.status.myNode.Name,
         network: network,
-        sender: senderAddress,
+        sender: state.senderOrbsAddress,
         contract: contract.options.address,
         method: method,
         params: params,
@@ -341,8 +337,9 @@ async function sendContract(state: Keeper, task: any, senderAddress: string) {
         encoded = contract.methods[method]().encodeABI();
     }
 
-    await signAndSendTransaction(state, task, encoded, contract.options.address, senderAddress).then(async (txhash) => {
+    await signAndSendTransaction(state, encoded, contract.options.address).then(async (txhash) => {
         state.status.successTX.push(tx);
+        task.pendingTX.push(tx);
         bi.txhash = txhash;
         await biSend(state.status.config.BIUrl, bi);
         Logger.log('SUCCESS:' + tx);
@@ -358,8 +355,44 @@ async function sendContract(state: Keeper, task: any, senderAddress: string) {
 }
 
 //////////////////////////////////////
+async function execNetworkAdress(state: Keeper, task: any, network: string, adrs: string) {
+    // resolve abi
+    const abi = state.abis[task.abi];
+    if (!abi) {
+        return Logger.error(`abi ${task.abi} does not exist in folder`);
+    }
+
+    // resolev contract
+    if (!(adrs in state.contracts)) {
+        state.contracts[adrs] = new state!.web3!.eth.Contract(abi, adrs, {
+            from: state.senderOrbsAddress, // default from address
+            gasPrice: state.gasPrice // default gas price in wei, 20 gwei in this case
+        });
+
+    }
+    const contract = state.contracts[adrs];
+
+    for (let send of task.send) {
+        // has params
+        if (send.params) {
+            for (let params of send.params) {
+                await sendNetworkContract(state, task, network, contract, send.method, params);
+            }
+        } // no params
+        else {
+            await sendNetworkContract(state, task, network, contract, send.method, null);
+        }
+    }
+}
+//////////////////////////////////////
+async function execNetwork(state: Keeper, task: any, network: string) {
+    for (let adrs of task.addresses) {
+        await execNetworkAdress(state, task, network, adrs);
+    }
+}
+//////////////////////////////////////
 export async function execTask(state: Keeper, task: any) {
-    const senderAddress = `0x${state.status.config.NodeOrbsAddress}`;
+
     Logger.log(`execute task: ${task.name}`);
     if (!task.active) {
         Logger.log(`task ${task.name} inactive`);
@@ -386,7 +419,10 @@ export async function execTask(state: Keeper, task: any) {
         // update before loop execution
         state.gasPrice = await state.web3.eth.getGasPrice();
 
-        await sendContract(state, task, senderAddress);
+        //await sendContract(state, task, senderAddress);
+        for (let network of task.networks) {
+            await execNetwork(state, task, network);
+        }
 
     } catch (e) {
         Logger.log(`Exception thrown from task: ${task.name}`);

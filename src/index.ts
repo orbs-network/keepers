@@ -8,7 +8,7 @@ import {
 } from './write/ethereum';
 
 import { readManagementStatus2 } from './leader'
-import { Keeper, isLeader, shouldExecTask, execTask, getBalance, canSendTx, setGuardianEthAddr, setStatus } from './keeper';
+import { Keeper, isLeader, shouldExecTask, execTask, getBalance, setGuardianEthAddr, setStatus, hasPendingTX } from './keeper';
 import * as tasksObj from './tasks_orig.json';
 
 export async function runLoop(config: Configuration) {
@@ -70,7 +70,10 @@ async function runLoopTick(config: Configuration, state: Keeper) {
 
   // tasks execution    
   for (const t of tasksObj.tasks) {
-    if (!(await canSendTx(state))) return;
+    if (!(await hasPendingTX(state, t))) {
+      Logger.log('TXs are still not complited for task ${t.name}')
+      return;
+    }
     if (shouldExecTask(state, t)) {
 
       // first call - after that, task sets the next execution
@@ -106,7 +109,7 @@ async function initializeState(config: Configuration): Promise<Keeper> {
 // async function test() {
 //
 // 	const config : Configuration = {
-// 		"ManagementServiceEndpoint": "http://34.235.246.172/services/matic-reader",
+// 		"ManagementServiceEndpoint": "http://34.199.236.72/services/matic-reader",
 // 		"EthereumEndpoint": "https://speedy-nodes-nyc.moralis.io/e25f7625703c58a9068b9947/bsc/mainnet",
 // 		"SignerEndpoint": "http://signer:7777",
 // 		"EthereumDiscountGasPriceFactor": 1,
