@@ -289,7 +289,7 @@ async function sendContract(state: State, task: any, senderAddress: string) {
     }
 
     await signAndSendTransaction(state, task, encoded, contract.options.address, senderAddress).then(async (txhash) => {
-        state.status.successTX.push(tx);
+        if (state.status) state.status.successTX.push(tx);
         bi.txhash = txhash;
         // await biSend(config.BIUrl, bi);
         Logger.log('SUCCESS:' + tx);
