@@ -11,14 +11,16 @@ export class State {
   gasPrice: string | undefined;
 
   chainId: number | undefined;
-  pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null} = { txHash: null, taskName: null, taskInterval: null };
+  pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null } = { txHash: null, taskName: null, taskInterval: null };
   nextTaskRun: { [taskName: string]: number } = {};
   MyGuardianAddress: string = '0x';
+  leader: any;
 
   ServiceLaunchTime = getCurrentClockTime(); // UTC seconds
   CurrentVersion = getCurrentVersion(); // v1.2.3
 
   // updated by read/management.ts
+
   ManagementLastPollTime = 0; // UTC seconds
   ManagementRefTime = 0; // UTC seconds
   ManagementEthRefBlock = 0;
@@ -71,6 +73,7 @@ export class State {
 
   // orbs clients - updated by read/vchain-reputations.ts
   orbsAccount = Orbs.createAccount();
+
   // orbsClientPerVchain: { [VirtualChainId: string]: Orbs.Client } = {};
 }
 

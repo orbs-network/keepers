@@ -1,4 +1,4 @@
-import Web3 from "web3";
+//import Web3 from "web3";
 // import { Contract } from 'web3-eth-contract';
 import { State } from './model/state';
 
@@ -6,7 +6,7 @@ import { State } from './model/state';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
 
-import Signer from 'orbs-signer-client';
+//import Signer from 'orbs-signer-client';
 import * as Logger from './logger';
 // import { biSend } from "./bi";
 // import {EthereumcanSendTx} from "./model/state";
@@ -14,65 +14,66 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 //const MAX_LAST_TX = 10;
-const EPOCH_DURATION_MINUTES = 167; // prime number to reduce task miss and span guardians more equally
+const EPOCH_DURATION_MINUTES = 29; // prime number to reduce task miss and span guardians more equally
 
 //////////////////////////////////////
-export class Keeper {
-    // private abis: { [key: string]: AbiItem[] };
-    // private contracts: { [key: string]: Contract};
-    public status: any;
-    public validEthAddress: string;
-    public management: any;
-    public gasPrice: string | undefined;
+// export class Keeper {
+//     // private abis: { [key: string]: AbiItem[] };
+//     // private contracts: { [key: string]: Contract};
+//     public status: any;
+//     public validEthAddress: string;
+//     public management: any;
+//     public gasPrice: string | undefined;
+//     //public currentLeader: any;
 
-    web3: Web3 | undefined;
-    chainId: number | undefined;
-    signer: Signer | undefined;
-    pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null };
-    nextTaskRun: { [taskName: string]: number };
-    guardianAddress: string = '0x';
+//     web3: Web3 | undefined;
+//     chainId: number | undefined;
+//     signer: Signer | undefined;
+//     pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null };
+//     nextTaskRun: { [taskName: string]: number };
+//     guardianAddress: string = '0x';
 
-    //////////////////////////////////////
-    constructor() {
-        // this.abis = {};
-        // this.contracts = {};
-        this.gasPrice = '';
-        this.validEthAddress = '';
-        this.status = {
-            start: Date.now(),
-            isLeader: Boolean,
-            successTX: [],
-            //failedTX: [],
-            periodicUpdates: 0,
-            lastUpdate: '',
-            leaderIndex: -1,
-            leaderName: '',
-            balance: {
-                "BNB": 0
-            }
-        };
+//     //////////////////////////////////////
+//     constructor() {
+//         // this.abis = {};
+//         // this.contracts = {};
+//         this.gasPrice = '';
+//         this.validEthAddress = '';
+//         this.status = {
+//             start: Date.now(),
+//             isLeader: Boolean,
+//             successTX: [],
+//             //failedTX: [],
+//             periodicUpdates: 0,
+//             lastUpdate: '',
+//             leaderIndex: -1,
+//             leaderName: '',
+//             balance: {
+//                 "BNB": 0
+//             }
+//         };
 
-        this.nextTaskRun = {};
-        this.pendingTx = { txHash: null, taskName: null, taskInterval: null };
-        // load all ABIs
-        // Logger.log(`loading abis at ${abiFolder}`);
-        // let files = ['./abi/revault-pool.json', './abi/revault-tvl.json'];
-        // TODO: change just for dbg
+//         this.nextTaskRun = {};
+//         this.pendingTx = { txHash: null, taskName: null, taskInterval: null };
+//         // load all ABIs
+//         // Logger.log(`loading abis at ${abiFolder}`);
+//         // let files = ['./abi/revault-pool.json', './abi/revault-tvl.json'];
+//         // TODO: change just for dbg
 
-        // let abi = JSON.parse(REVAULT_POOL_ABI);
-        // this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
+//         // let abi = JSON.parse(REVAULT_POOL_ABI);
+//         // this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
 
-        // readdirSync(abiFolder).forEach(file => {
-        //     Logger.log(`loading ABI file: ${file}`);
-        //     let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
-        //     if (abi) {
-        //         var name = file.substring(0, file.lastIndexOf('.')) || file;
-        //         this.abis[name] = abi;
-        //     }
-        // });
-    }
-}
-// TODO: restore with status
+//         // readdirSync(abiFolder).forEach(file => {
+//         //     Logger.log(`loading ABI file: ${file}`);
+//         //     let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
+//         //     if (abi) {
+//         //         var name = file.substring(0, file.lastIndexOf('.')) || file;
+//         //         this.abis[name] = abi;
+//         //     }
+//         // });
+//     }
+// }
+// // TODO: restore with status
 //////////////////////////////////////
 // function getUptime(state: State): string {
 //     // get total seconds between the times
@@ -108,27 +109,49 @@ export class Keeper {
 // }
 
 //////////////////////////////////////////////////////////////////
-export function setLeader(state: State) {
-    state.status.isLeader = isLeader(state.ManagementCurrentCommittee, state.MyGuardianAddress);
-    if (!state.status.isLeader) {
-        Logger.log(`Node was not selected as a leader`);
-        const currLeader = currentLeader(state.management.Payload.CurrentCommittee).EthAddress;
-        Logger.log(`Current leader eth address: ${currLeader}`);
+// export function setLeader(state: State) {
+//     const wasLeader = state.status.isLeader;
+//     state.status.isLeader = isLeader(state, state.ManagementCurrentCommittee, state.MyGuardianAddress);
 
-        state.nextTaskRun = {};
-        return;
-    }
-}
+//     if (!wasLeader && state.status.isLeader) {
+//         Logger.log(`leader changed - ${JSON.stringify(state.leader)}`);
+
+//     }
+//     if (!state.status.isLeader) {
+//         state.nextTaskRun = {};
+//     }
+//     //     Logger.log(`Node was not selected as a leader`);
+//     //     const currLeader = currentLeader(state.management.Payload.CurrentCommittee).EthAddress;
+//     //     Logger.log(`Current leader eth address: ${currLeader}`);
+
+//     //     state.nextTaskRun = {};
+//     //     return;
+//     // }
+// }
 
 function currentLeader(committee: Array<any>): any { // currentLeader
     return committee[Math.floor(Date.now() / (EPOCH_DURATION_MINUTES * 60000)) % committee.length];
 }
 
 //////////////////////////////////////////////////////////////////
-export function isLeader(committee: Array<any>, address: string): boolean {
-    const currentLeaderInfo = currentLeader(committee);
-    Logger.log(`currentLeaderInfo: ${JSON.stringify(currentLeaderInfo)}`);
-    return currentLeaderInfo.EthAddress === address;
+export function isLeader(state: State, committee: Array<any>, address: string): boolean {
+    // state.status
+    if (!state.status) {
+        const stat = { isLeader: true }; // for log print
+        state.status = stat;
+
+    }
+    state.leader = currentLeader(committee);
+
+    const wasLeader = state.status.isLeader;
+    state.status.isLeader = state.leader.EthAddress === address;
+
+
+    if (wasLeader !== state.status.isLeader) {
+        Logger.log(`leader changed - ${JSON.stringify(state.leader)}`);
+    }
+
+    return state.status.isLeader;
 }
 
 //////////////////////////////////////////////////////////////////

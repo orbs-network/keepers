@@ -64,14 +64,14 @@ async function runLoopTick(config: Configuration, state: State) {
   // leader
   // setLeader(state);
 
-  if (!isLeader(state.ManagementCurrentCommittee, state.MyGuardianAddress)) return;
+  if (!isLeader(state, state.ManagementCurrentCommittee, state.MyGuardianAddress)) return;
 
   Logger.log(`Node was selected as a leader`);
 
   // tasks execution
   const senderAddress = `0x${config.NodeOrbsAddress}`;
   for (const t of tasksObj.tasks) {
-  	// TODO: taskInterval set to t.taskInterval *= 60000
+    // TODO: taskInterval set to t.taskInterval *= 60000
     if (!(await canSendTx(state))) return;
     if (!shouldSendTx(state, t.name, t.taskInterval * 60000)) continue;
 
