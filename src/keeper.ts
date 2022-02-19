@@ -14,7 +14,7 @@ import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 //const MAX_LAST_TX = 10;
-const EPOCH_DURATION_MINUTES = 167; // prime number to reduce task miss and span guardians more equally
+const EPOCH_DURATION_MINUTES = 31; // prime number to reduce task miss and span guardians more equally
 
 //////////////////////////////////////
 export class Keeper {
