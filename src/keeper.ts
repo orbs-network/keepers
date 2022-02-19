@@ -392,7 +392,6 @@ async function execNetwork(state: Keeper, task: any, network: string) {
 }
 //////////////////////////////////////
 export async function execTask(state: Keeper, task: any) {
-
     Logger.log(`execute task: ${task.name}`);
     if (!task.active) {
         Logger.log(`task ${task.name} inactive`);

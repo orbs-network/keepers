@@ -13,10 +13,15 @@ import * as tasksObj from './tasks_orig.json';
 
 export async function runLoop(config: Configuration) {
   const state = await initializeState(config);
+  if (process.env.DEBUG) {
+    Logger.log(`DEBUG mode -----------------`);
+    config.RunLoopPollTimeSeconds = 10;
+    console.log(`RunLoopPollTimeSeconds: 10 sec`);
+    return true;
+  }
+
   // initialize status.json to make sure healthcheck passes from now on
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
-
-	Logger.log('test1');
 
   for (; ;) {
     try {
@@ -48,7 +53,8 @@ export async function runLoop(config: Configuration) {
       Logger.error(err.stack);
 
       // always write status.json file (and pass the error)
-      // writeStatusToDisk(config.StatusJsonPath, state);
+      state.status.error = err.stack;
+      writeStatusToDisk(config.StatusJsonPath, state);
     }
   }
 }
@@ -72,8 +78,8 @@ async function runLoopTick(config: Configuration, state: Keeper) {
 
   // tasks execution
   for (const t of tasksObj.tasks) {
-    if (!(await hasPendingTX(state, t))) {
-      Logger.log('TXs are still not complited for task ${t.name}')
+    if (await hasPendingTX(state, t)) {
+      Logger.log(`TXs are still not complited for task ${t.name}`)
       return;
     }
     if (shouldExecTask(state, t)) {
