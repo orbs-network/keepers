@@ -13,8 +13,8 @@ import * as Logger from './logger';
 import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
-const MAX_LAST_TX = 10;
-const EPOCH_DURATION_MINUTES = 13; //167; // prime number to reduce task miss and span guardians more equally
+//const MAX_LAST_TX = 10;
+const EPOCH_DURATION_MINUTES = 31; // prime number to reduce task miss and span guardians more equally
 
 //////////////////////////////////////
 export class Keeper {
@@ -72,39 +72,40 @@ export class Keeper {
         // });
     }
 }
+// TODO: restore with status
 //////////////////////////////////////
-function getUptime(state: State): string {
-    // get total seconds between the times
-    var delta = Math.abs(Date.now() - state.status.start) / 1000;
+// function getUptime(state: State): string {
+//     // get total seconds between the times
+//     var delta = Math.abs(Date.now() - state.status.start) / 1000;
 
-    // calculate (and subtract) whole days
-    var days = Math.floor(delta / 86400);
-    delta -= days * 86400;
+//     // calculate (and subtract) whole days
+//     var days = Math.floor(delta / 86400);
+//     delta -= days * 86400;
 
-    // calculate (and subtract) whole hours
-    var hours = Math.floor(delta / 3600) % 24;
-    delta -= hours * 3600;
+//     // calculate (and subtract) whole hours
+//     var hours = Math.floor(delta / 3600) % 24;
+//     delta -= hours * 3600;
 
-    // calculate (and subtract) whole minutes
-    var minutes = Math.floor(delta / 60) % 60;
-    delta -= minutes * 60;
+//     // calculate (and subtract) whole minutes
+//     var minutes = Math.floor(delta / 60) % 60;
+//     delta -= minutes * 60;
 
-    // what's left is seconds
-    var seconds = delta % 60;  // in theory the modulus is not required
+//     // what's left is seconds
+//     var seconds = delta % 60;  // in theory the modulus is not required
 
-    return `${days} days : ${hours}:${minutes}:${seconds}`;
-}
+//     return `${days} days : ${hours}:${minutes}:${seconds}`;
+// }
 //////////////////////////////////////
-export function setStatus(state: State): any {
-    // keept last 5 tx
-    if (state.status?.successTX.length > MAX_LAST_TX) {
-        state.status.successTX.length.shift();
-    }
-    if (state.status?.failTX.length > MAX_LAST_TX) {
-        state.status.successTX.length.shift();
-    }
-    state.status.uptime = getUptime(state);
-}
+// export function setStatus(state: State): any {
+//     // keept last 5 tx
+//     if (state.status?.successTX.length > MAX_LAST_TX) {
+//         state.status.successTX.length.shift();
+//     }
+//     if (state.status?.failTX.length > MAX_LAST_TX) {
+//         state.status.failTX.length.shift();
+//     }
+//     state.status.uptime = getUptime(state);
+// }
 
 //////////////////////////////////////////////////////////////////
 export function setLeader(state: State) {
@@ -291,7 +292,7 @@ async function sendContract(state: State, task: any, senderAddress: string) {
     }
 
     await signAndSendTransaction(state, task, encoded, contract.options.address, senderAddress).then(async (txhash) => {
-        if (state.status) state.status.successTX.push(tx);
+        //if (state.status) state.status?.successTX.push(tx);
         bi.txhash = txhash;
         // await biSend(config.BIUrl, bi);
         Logger.log('SUCCESS:' + tx);
