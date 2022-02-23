@@ -127,7 +127,9 @@ function currentLeader(committee: Array<any>): any { // currentLeader
 export function isLeader(committee: Array<any>, address: string): boolean {
     const currentLeaderInfo = currentLeader(committee);
     Logger.log(`currentLeaderInfo: ${JSON.stringify(currentLeaderInfo)}`);
-    return currentLeaderInfo.EthAddress === address;
+    Logger.log(`Force set of node to current leader (address=${address})`);
+    return true; // TODO: tmp should be removed
+    // return currentLeaderInfo.EthAddress === address; // TODO: tmp should be uncomment
 }
 
 //////////////////////////////////////////////////////////////////
