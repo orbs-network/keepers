@@ -63,360 +63,361 @@ export class Keeper {
             }
         });
     }
-}
-//////////////////////////////////////
-function getUptime(state: Keeper): string {
-    // get total seconds between the times
-    var delta = Math.abs(Date.now() - state.status.start) / 1000;
 
-    // calculate (and subtract) whole days
-    var days = Math.floor(delta / 86400);
-    delta -= days * 86400;
+    //////////////////////////////////////
+    getUptime(): string {
+        // get total seconds between the times
+        var delta = Math.abs(Date.now() - this.status.start) / 1000;
 
-    // calculate (and subtract) whole hours
-    var hours = Math.floor(delta / 3600) % 24;
-    delta -= hours * 3600;
+        // calculate (and subtract) whole days
+        var days = Math.floor(delta / 86400);
+        delta -= days * 86400;
 
-    // calculate (and subtract) whole minutes
-    var minutes = Math.floor(delta / 60) % 60;
-    delta -= minutes * 60;
+        // calculate (and subtract) whole hours
+        var hours = Math.floor(delta / 3600) % 24;
+        delta -= hours * 3600;
 
-    // what's left is seconds
-    var seconds = delta % 60;  // in theory the modulus is not required
+        // calculate (and subtract) whole minutes
+        var minutes = Math.floor(delta / 60) % 60;
+        delta -= minutes * 60;
 
-    return `${days} days : ${hours}:${minutes}:${seconds}`;
-}
-//////////////////////////////////////
-export async function getBalance(state: Keeper) {
-    const senderAddress = `0x${state.status.config.NodeOrbsAddress}`;
-    if (!state.web3) throw new Error('web3 client is not initialized.');
+        // what's left is seconds
+        var seconds = delta % 60;  // in theory the modulus is not required
 
-    state.status.balance.BNB = await state.web3.eth.getBalance(senderAddress);
-}
-//////////////////////////////////////
-export function setStatus(state: Keeper): any {
-    // keept last 5 tx
-    if (state.status.successTX.length > MAX_LAST_TX) {
-        state.status.successTX.length.shift();
+        return `${days} days : ${hours}:${minutes}:${seconds}`;
     }
-    if (state.status.failTX.length > MAX_LAST_TX) {
-        state.status.failTX.length.shift();
+    //////////////////////////////////////
+    async getBalance() {
+        const senderAddress = `0x${this.status.config.NodeOrbsAddress}`;
+        if (!this.web3) throw new Error('web3 client is not initialized.');
+
+        this.status.balance.BNB = await this.web3.eth.getBalance(senderAddress);
     }
-    state.status.uptime = getUptime(state);
-    const now = new Date();
-    state.status.lastUpdateUTC = now.toUTCString();
-}
-
-//////////////////////////////////////
-export async function setGuardianEthAddr(state: Keeper, config: Configuration) {
-    // save config in status
-    state.status.config = config;
-    state.senderOrbsAddress = `0x${config.NodeOrbsAddress}`;
-
-    try {
-        const curAddress = state.guardianAddress;
-        state.guardianAddress = _.map(_.filter(state.management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress), 'EthAddress')[0];
-        if (curAddress !== state.guardianAddress)
-            Logger.log(`guardian address was set to ${state.guardianAddress}`);
-
-    } catch (err) {
-        Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
-        return;
-    }
-}
-
-//////////////////////////////////////////////////////////////////
-export function isLeader(state: Keeper) {
-    if (process.env.DEBUG) {
-        Logger.log(`DEBUG mode - Always selected as leader`);
-        return true;
-    }
-    const committee = state.management.Payload.CurrentCommittee;
-    const leaderIndex = currentLeaderIndex(committee);
-
-    // same leader dont change
-    if (leaderIndex === state.status.leaderIndex)
-        return;
-
-    // replace leader
-    const leader = committee[leaderIndex];
-    state.status.leaderIndex = leaderIndex;
-    state.status.leaderName = leader.Name;
-    state.status.leaderEthAddress = leader.EthAddress;
-
-    Logger.log(`leader changed: ${leader.Name} ${leader.EthAddress}`);
-
-    // M I the leader?
-    state.status.isLeader = leader.EthAddress === state.guardianAddress;
-
-    // send bi
-    let bi: any = {
-        type: 'leaderChanged',
-        nodeName: state.status.myNode.Name,
-        leaderIndex: leaderIndex,
-        leaderName: leader.Name,
-        leaderEthAddress: leader.EthAddress
-    }
-    biSend(state.status.config.BIUrl, bi);
-
-    if (!state.status.isLeader) {
-        state.nextTaskRun = {};
-    }
-    return state.status.isLeader;
-}
-
-//////////////////////////////////////////////////////////////////
-function currentLeaderIndex(committee: Array<any>): any {
-    return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
-}
-
-//////////////////////////////////////////////////////////////////
-function scheduleNextRun(state: Keeper, taskName: string, minInterval: number) {
-    const msInterval = minInterval * 60 * 1000;
-    state.nextTaskRun[taskName] = msInterval * Math.floor(Date.now() / msInterval) + msInterval;
-    const dt = new Date(state.nextTaskRun[taskName]);
-    Logger.log(`scheduled next run for task ${taskName} to ${dt.toISOString()}`);
-}
-
-//////////////////////////////////////////////////////////////////
-export function shouldExecTask(state: Keeper, task: any) {
-    if (!(task.name in state.nextTaskRun)) {
-        Logger.log(`task ${task.name} has no entry in nextTaskRun ${JSON.stringify(state.nextTaskRun)}`);
-        scheduleNextRun(state, task.name, task.minInterval);
-        return false;
-    }
-
-    // TODO: add support: check if leader th is near and send tx
-
-    if (Date.now() >= state.nextTaskRun[task.name]) {
-        Logger.log(`next slot run hit for ${task.name}`);
-        return true;
-    }
-
-    return false;
-}
-
-async function isTXPending(web3: Web3 | undefined, txHash: string): Promise<boolean> {
-    Logger.log(`checking txHash: ${txHash}`);
-    const tx = await web3!.eth.getTransaction(txHash);
-    if (tx == null || tx.blockNumber == null) {
-        Logger.log(`tx ${txHash} is still waiting for block.`);
-        return true; // still pending
-    }
-
-    const receipt = await web3!.eth.getTransactionReceipt(txHash);
-    if (receipt == null) {
-        Logger.log(`tx ${txHash} does not have receipt yet.`);
-        return true; // still pending
-    }
-
-    Logger.log(`available receipt for tx ${txHash}: ${JSON.stringify(receipt)}`);
-    return false;
-
-}
-//////////////////////////////////////////////////////////////////
-export async function hasPendingTX(state: Keeper, task: any): Promise<boolean> {
-    // creating pending tx set
-    if (!task.pendingTX) {
-        task.pendingTX = new Set<string>();
-        return false;
-    }
-    let hasPending = false;
-    let completed: Array<string> = [];
-    task.pendingTX.forEach(async (txHash: string) => {
-        if (await isTXPending(state.web3, txHash)) {
-            hasPending = true;
-        } else {
-            completed.push(txHash);
+    //////////////////////////////////////
+    setStatus(): any {
+        // keept last 5 tx
+        if (this.status.successTX.length > MAX_LAST_TX) {
+            this.status.successTX.length.shift();
         }
-    });
-    // remove completed
-    for (let txHash in completed) {
-        task.pendingTX.delete(txHash);
+        if (this.status.failTX.length > MAX_LAST_TX) {
+            this.status.failTX.length.shift();
+        }
+        this.status.uptime = this.getUptime();
+        const now = new Date();
+        this.status.lastUpdateUTC = now.toUTCString();
     }
 
-    //cleanup completed
-    return hasPending;
-}
+    //////////////////////////////////////
+    setGuardianEthAddr(config: Configuration) {
+        // save config in status
+        this.status.config = config;
+        this.senderOrbsAddress = `0x${config.NodeOrbsAddress}`;
 
-//////////////////////////////////////
-async function sign(state: Keeper, txObject: TxData) {
-    if (process.env.DEBUG) {
-        Logger.log(`DEBUG mode - use debug signer`);
-        return debugSign(txObject);
-    }
-    else {
-        return await state.signer?.sign(txObject, state.chainId);
-    }
-}
-//////////////////////////////////////
-async function signAndSendTransaction(
-    state: Keeper,
-    //task: any,
-    encodedAbi: string,
-    contractAddress: string,
-    //senderAddress: string,
-): Promise<string> {
-    const senderAddress = state.senderOrbsAddress;
-    const web3 = state.web3;
-    if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
-    if (!state.signer) throw new Error('Cannot send tx until signer is initialized.');
+        try {
+            const curAddress = this.guardianAddress;
+            this.guardianAddress = _.map(_.filter(this.management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress), 'EthAddress')[0];
+            if (curAddress !== this.guardianAddress)
+                Logger.log(`guardian address was set to ${this.guardianAddress}`);
 
-    let nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
-    Logger.log(`senderAddress: ${senderAddress} nonce: ${nonce}`);
-
-    const txObject: TxData = {
-        to: contractAddress,
-        gasPrice: toNumber(state.gasPrice || '0') * 1.1,  // TODO: fixme only for testing
-        gasLimit: GAS_LIMIT_HARD_LIMIT,
-        data: encodedAbi,
-        nonce: nonce,
-    };
-
-    Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
-
-    const { rawTransaction, transactionHash } = await sign(state, txObject);
-
-    if (!rawTransaction || !transactionHash) {
-        throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+        } catch (err) {
+            Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
+            return;
+        }
     }
 
-    return new Promise<string>((resolve, reject) => {
-        // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
-        web3.eth
-            .sendSignedTransaction(rawTransaction, (err) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve(transactionHash);
+    //////////////////////////////////////////////////////////////////
+    isLeader() {
+        if (process.env.DEBUG) {
+            Logger.log(`DEBUG mode - Always selected as leader`);
+            return true;
+        }
+        const committee = this.management.Payload.CurrentCommittee;
+        const leaderIndex = this.currentLeaderIndex(committee);
 
-                }
-            })
-            .catch(() => {
-                // do nothing (ignore the web3 promise)
-            });
-    });
-}
+        // same leader dont change
+        if (leaderIndex === this.status.leaderIndex)
+            return;
 
-//////////////////////////////////////
-//async function sendContract(state: Keeper, task: any, senderAddress: string) {
-async function sendNetworkContract(state: Keeper, task: any, network: string, contract: any, method: string, params: any) {
+        // replace leader
+        const leader = committee[leaderIndex];
+        this.status.leaderIndex = leaderIndex;
+        this.status.leaderName = leader.Name;
+        this.status.leaderEthAddress = leader.EthAddress;
 
-    if (!state.web3) throw new Error('web3 client is not initialized.');
+        Logger.log(`leader changed: ${leader.Name} ${leader.EthAddress}`);
 
-    const now = new Date();
-    const dt = now.toISOString();
-    //let contract = new state.web3.eth.Contract(abi, addr);
-    const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
+        // M I the leader?
+        this.status.isLeader = leader.EthAddress === this.guardianAddress;
 
-    let bi: any = {
-        type: 'sendTX',
-        nodeName: state.status.myNode.Name,
-        network: network,
-        sender: state.senderOrbsAddress,
-        contract: contract.options.address,
-        method: method,
-        params: params,
-        success: true
+        // send bi
+        let bi: any = {
+            type: 'leaderChanged',
+            nodeName: this.status.myNode.Name,
+            leaderIndex: leaderIndex,
+            leaderName: leader.Name,
+            leaderEthAddress: leader.EthAddress
+        }
+        biSend(this.status.config.BIUrl, bi);
+
+        if (!this.status.isLeader) {
+            this.nextTaskRun = {};
+        }
+        return this.status.isLeader;
     }
 
-    // encode call
-    let encoded: any;
-    if (params) {
-        encoded = contract.methods[method](params).encodeABI();
-    } else {
-        encoded = contract.methods[method]().encodeABI();
+    //////////////////////////////////////////////////////////////////
+    currentLeaderIndex(committee: Array<any>): any {
+        return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
     }
 
-    await signAndSendTransaction(state, encoded, contract.options.address).then(async (txhash) => {
-        state.status.successTX.push(tx);
-        task.pendingTX.add(txhash);
-        bi.txhash = txhash;
-        await biSend(state.status.config.BIUrl, bi);
-        Logger.log('SUCCESS:' + tx);
-
-    }).catch(async (err: Error) => {
-        state.status.failTX.push(tx);
-        bi.success = false;
-        bi.error = err.message;
-        await biSend(state.status.config.BIUrl, bi);
-        Logger.error('signAndSendTransaction exception: ' + err.message);
-        Logger.log('FAIL:' + tx);
-    });
-}
-
-//////////////////////////////////////
-async function execNetworkAdress(state: Keeper, task: any, network: string, adrs: string) {
-    // resolve abi
-    const abi = state.abis[task.abi];
-    if (!abi) {
-        return Logger.error(`abi ${task.abi} does not exist in folder`);
+    //////////////////////////////////////////////////////////////////
+    scheduleNextRun(taskName: string, minInterval: number) {
+        const msInterval = minInterval * 60 * 1000;
+        this.nextTaskRun[taskName] = msInterval * Math.floor(Date.now() / msInterval) + msInterval;
+        const dt = new Date(this.nextTaskRun[taskName]);
+        Logger.log(`scheduled next run for task ${taskName} to ${dt.toISOString()}`);
     }
 
-    // resolev contract
-    if (!(adrs in state.contracts)) {
-        state.contracts[adrs] = new state!.web3!.eth.Contract(abi, adrs, {
-            from: state.senderOrbsAddress, // default from address
-            gasPrice: state.gasPrice // default gas price in wei, 20 gwei in this case
-        });
+    //////////////////////////////////////////////////////////////////
+    shouldExecTask(task: any) {
+        if (!(task.name in this.nextTaskRun)) {
+            Logger.log(`task ${task.name} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
+            this.scheduleNextRun(task.name, task.minInterval);
+            return false;
+        }
+
+        // TODO: add support: check if leader th is near and send tx
+
+        if (Date.now() >= this.nextTaskRun[task.name]) {
+            Logger.log(`next slot run hit for ${task.name}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    async isTXPending(web3: Web3 | undefined, txHash: string): Promise<boolean> {
+        Logger.log(`checking txHash: ${txHash}`);
+        const tx = await web3!.eth.getTransaction(txHash);
+        if (tx == null || tx.blockNumber == null) {
+            Logger.log(`tx ${txHash} is still waiting for block.`);
+            return true; // still pending
+        }
+
+        const receipt = await web3!.eth.getTransactionReceipt(txHash);
+        if (receipt == null) {
+            Logger.log(`tx ${txHash} does not have receipt yet.`);
+            return true; // still pending
+        }
+
+        Logger.log(`available receipt for tx ${txHash}: ${JSON.stringify(receipt)}`);
+        return false;
 
     }
-    const contract = state.contracts[adrs];
-    for (let send of task.send) {
-        // has params
-        if (send.params) {
-            for (let params of send.params) {
-                await sendNetworkContract(state, task, network, contract, send.method, params);
+    //////////////////////////////////////////////////////////////////
+    async hasPendingTX(task: any): Promise<boolean> {
+        // creating pending tx set
+        if (!task.pendingTX) {
+            task.pendingTX = new Set<string>();
+            return false;
+        }
+        let hasPending = false;
+        let completed: Array<string> = [];
+        task.pendingTX.forEach(async (txHash: string) => {
+            if (await this.isTXPending(this.web3, txHash)) {
+                hasPending = true;
+            } else {
+                completed.push(txHash);
             }
-        } // no params
+        });
+        // remove completed
+        for (let txHash in completed) {
+            task.pendingTX.delete(txHash);
+        }
+
+        //cleanup completed
+        return hasPending;
+    }
+
+    //////////////////////////////////////
+    async sign(txObject: TxData) {
+        if (process.env.DEBUG) {
+            Logger.log(`DEBUG mode - use debug signer`);
+            return debugSign(txObject);
+        }
         else {
-            await sendNetworkContract(state, task, network, contract, send.method, null);
+            return await this.signer?.sign(txObject, this.chainId);
         }
     }
-}
-//////////////////////////////////////
-async function execNetwork(state: Keeper, task: any, network: string) {
-    for (let adrs of task.addresses) {
-        await execNetworkAdress(state, task, network, adrs);
-    }
-}
-//////////////////////////////////////
-export async function execTask(state: Keeper, task: any) {
-    Logger.log(`execute task: ${task.name}`);
-    if (!task.active) {
-        Logger.log(`task ${task.name} inactive`);
-        return;
+
+    //////////////////////////////////////
+    async signAndSendTransaction(
+        //task: any,
+        encodedAbi: string,
+        contractAddress: string,
+        //senderAddress: string,
+    ): Promise<string> {
+        const senderAddress = this.senderOrbsAddress;
+        const web3 = this.web3;
+        if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
+        if (!this.signer) throw new Error('Cannot send tx until signer is initialized.');
+
+        let nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
+        Logger.log(`senderAddress: ${senderAddress} nonce: ${nonce}`);
+
+        const txObject: TxData = {
+            to: contractAddress,
+            gasPrice: toNumber(this.gasPrice || '0') * 1.1,  // TODO: fixme only for testing
+            gasLimit: GAS_LIMIT_HARD_LIMIT,
+            data: encodedAbi,
+            nonce: nonce,
+        };
+
+        Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+
+        const { rawTransaction, transactionHash } = await this.sign(txObject);
+
+        if (!rawTransaction || !transactionHash) {
+            throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+        }
+
+        return new Promise<string>((resolve, reject) => {
+            // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
+            web3.eth
+                .sendSignedTransaction(rawTransaction, (err) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(transactionHash);
+
+                    }
+                })
+                .catch(() => {
+                    // do nothing (ignore the web3 promise)
+                });
+        });
     }
 
-    // send bi
-    let bi: any = {
-        type: 'execTask',
-        name: task.name,
-        nodeName: state.status.myNode.Name,
-        network: task.networks[0],
-        minInterval: task.minInterval,
+    //////////////////////////////////////
+    //async function sendContract(state: Keeper, task: any, senderAddress: string) {
+    async sendNetworkContract(task: any, network: string, contract: any, method: string, params: any) {
+
+        if (!this.web3) throw new Error('web3 client is not initialized.');
+
+        const now = new Date();
+        const dt = now.toISOString();
+        //let contract = new this.web3.eth.Contract(abi, addr);
+        const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
+
+        let bi: any = {
+            type: 'sendTX',
+            nodeName: this.status.myNode.Name,
+            network: network,
+            sender: this.senderOrbsAddress,
+            contract: contract.options.address,
+            method: method,
+            params: params,
+            success: true
+        }
+
+        // encode call
+        let encoded: any;
+        if (params) {
+            encoded = contract.methods[method](params).encodeABI();
+        } else {
+            encoded = contract.methods[method]().encodeABI();
+        }
+
+        await this.signAndSendTransaction(encoded, contract.options.address).then(async (txhash) => {
+            this.status.successTX.push(tx);
+            task.pendingTX.add(txhash);
+            bi.txhash = txhash;
+            await biSend(this.status.config.BIUrl, bi);
+            Logger.log('SUCCESS:' + tx);
+
+        }).catch(async (err: Error) => {
+            this.status.failTX.push(tx);
+            bi.success = false;
+            bi.error = err.message;
+            await biSend(this.status.config.BIUrl, bi);
+            Logger.error('signAndSendTransaction exception: ' + err.message);
+            Logger.log('FAIL:' + tx);
+        });
     }
-    await biSend(state.status.config.BIUrl, bi);
 
-    try {
+    //////////////////////////////////////
+    async execNetworkAdress(task: any, network: string, adrs: string) {
+        // resolve abi
+        const abi = this.abis[task.abi];
+        if (!abi) {
+            return Logger.error(`abi ${task.abi} does not exist in folder`);
+        }
 
-        if (!state.web3) {
-            Logger.error('web3 client is not initialized.');
+        // resolev contract
+        if (!(adrs in this.contracts)) {
+            this.contracts[adrs] = new this.web3!.eth.Contract(abi, adrs, {
+                from: this.senderOrbsAddress, // default from address
+                gasPrice: this.gasPrice // default gas price in wei, 20 gwei in this case
+            });
+
+        }
+        const contract = this.contracts[adrs];
+        for (let send of task.send) {
+            // has params
+            if (send.params) {
+                for (let params of send.params) {
+                    await this.sendNetworkContract(task, network, contract, send.method, params);
+                }
+            } // no params
+            else {
+                await this.sendNetworkContract(task, network, contract, send.method, null);
+            }
+        }
+    }
+    //////////////////////////////////////
+    async execNetwork(task: any, network: string) {
+        for (let adrs of task.addresses) {
+            await this.execNetworkAdress(task, network, adrs);
+        }
+    }
+    //////////////////////////////////////
+    async execTask(task: any) {
+        Logger.log(`execute task: ${task.name}`);
+        if (!task.active) {
+            Logger.log(`task ${task.name} inactive`);
             return;
         }
 
-        // update before loop execution
-        state.gasPrice = await state.web3.eth.getGasPrice();
-
-        //await sendContract(state, task, senderAddress);
-        for (let network of task.networks) {
-            await execNetwork(state, task, network);
+        // send bi
+        let bi: any = {
+            type: 'execTask',
+            name: task.name,
+            nodeName: this.status.myNode.Name,
+            network: task.networks[0],
+            minInterval: task.minInterval,
         }
+        await biSend(this.status.config.BIUrl, bi);
 
-    } catch (e) {
-        Logger.log(`Exception thrown from task: ${task.name}`);
-        Logger.error(e);
+        try {
+
+            if (!this.web3) {
+                Logger.error('web3 client is not initialized.');
+                return;
+            }
+
+            // update before loop execution
+            this.gasPrice = await this.web3.eth.getGasPrice();
+
+            //await sendContract(state, task, senderAddress);
+            for (let network of task.networks) {
+                await this.execNetwork(task, network);
+            }
+
+        } catch (e) {
+            Logger.log(`Exception thrown from task: ${task.name}`);
+            Logger.error(e);
+        }
     }
 }
 

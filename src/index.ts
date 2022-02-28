@@ -8,11 +8,11 @@ import {
 } from './write/ethereum';
 
 import { readManagementStatus2 } from './leader'
-import { Keeper, isLeader, shouldExecTask, execTask, getBalance, setGuardianEthAddr, setStatus, hasPendingTX } from './keeper';
+import { Keeper } from './keeper';//, isLeader, shouldExecTask, execTask, getBalance, setGuardianEthAddr, setStatus, hasPendingTX } from './keeper';
 import * as tasksObj from './tasks_orig.json';
 
 export async function runLoop(config: Configuration) {
-  const state = await initializeState(config);
+  const keepers = await initializeState(config);
   if (process.env.DEBUG) {
     Logger.log(`DEBUG mode -----------------`);
     config.RunLoopPollTimeSeconds = 10;
@@ -25,23 +25,23 @@ export async function runLoop(config: Configuration) {
   for (; ;) {
     try {
       // has to be called before setGuardians for management
-      const statusOK = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+      const statusOK = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, keepers);
       if (!statusOK) {
         Logger.error(`readManagementStatus2 failed, url=${config.ManagementServiceEndpoint}`);
         continue;
       }
 
-      setGuardianEthAddr(state, config);
+      keepers.setGuardianEthAddr(config);
       // make sure tasks are visible in svc status
-      state.status.tasks = tasksObj;
+      keepers.status.tasks = tasksObj;
 
       // updates the json
-      setStatus(state);
+      keepers.setStatus();
       // write status.json file, we don't mind doing this often (2min)
-      writeStatusToDisk(config.StatusJsonPath, state.status);
+      writeStatusToDisk(config.StatusJsonPath, keepers.status);
 
       // main business logic
-      await runLoopTick(config, state);
+      await runLoopTick(config, keepers);
 
       // SLEEP 2 minutes
       const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
@@ -52,44 +52,44 @@ export async function runLoop(config: Configuration) {
       Logger.error(err.stack);
 
       // always write status.json file (and pass the error)
-      state.status.error = err.stack;
-      writeStatusToDisk(config.StatusJsonPath, state);
+      keepers.status.error = err.stack;
+      writeStatusToDisk(config.StatusJsonPath, keepers);
     }
   }
 }
 
 // runs every 2 minutes in prod, 1 second in tests
-async function runLoopTick(config: Configuration, state: Keeper) {
-  if (state.status.tickCount % 10 === 0)
-    Logger.log(`Run loop waking up. tick: ${state.status.tickCount}`);
+async function runLoopTick(config: Configuration, keepers: Keeper) {
+  if (keepers.status.tickCount % 10 === 0)
+    Logger.log(`Run loop waking up. tick: ${keepers.status.tickCount}`);
 
-  state.status.tickCount += 1;
+  keepers.status.tickCount += 1;
 
   // phase 1
-  await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, state);
+  await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, keepers);
 
   // balance
-  await getBalance(state);
+  await keepers.getBalance(); /// ??? WHY check
 
   // leader
-  if (!isLeader(state)) return;
+  if (!keepers.isLeader()) return;
   Logger.log(`Node was selected as a leader`);
 
   // tasks execution
   for (const t of tasksObj.tasks) {
-    if (await hasPendingTX(state, t)) {
+    if (await keepers.hasPendingTX(t)) {
       Logger.log(`TXs are still not complited for task ${t.name}`)
       return;
     }
-    if (shouldExecTask(state, t)) {
+    if (keepers.shouldExecTask(t)) {
 
       // first call - after that, task sets the next execution
-      await execTask(state, t);
+      await keepers.execTask(t);
     }
   }
 
   // phase 3
-  // await readPendingTransactionStatus(state.EthereumLastElectionsTx, state, config);
+  // await readPendingTransactionStatus(keepers.EthereumLastElectionsTx, state, config);
 
   // phase 4
   // code opt. + cleanups
@@ -98,15 +98,14 @@ async function runLoopTick(config: Configuration, state: Keeper) {
 // helpers
 
 async function initializeState(config: Configuration): Promise<Keeper> {
-  const state = new Keeper()
+  const keepers = new Keeper()
 
   // const state = new State();
-  await initWeb3Client(config.EthereumEndpoint, state);
-  state.signer = new Signer(config.SignerEndpoint);
-  state.status.config = config;
-  //await setGuardianAddr(state, config);
+  await initWeb3Client(config.EthereumEndpoint, keepers);
+  keepers.signer = new Signer(config.SignerEndpoint);
+  keepers.status.config = config;
 
-  return state;
+  return keepers;
 }
 
 //
