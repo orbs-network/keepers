@@ -4,4 +4,4 @@ dist/
 .DS_Store
 node_modules/
 status/
-debugSigner.ts
+debug.json

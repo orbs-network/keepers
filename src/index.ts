@@ -17,7 +17,6 @@ export async function runLoop(config: Configuration) {
     Logger.log(`DEBUG mode -----------------`);
     config.RunLoopPollTimeSeconds = 10;
     console.log(`RunLoopPollTimeSeconds: 10 sec`);
-    return true;
   }
 
   // initialize status.json to make sure healthcheck passes from now on
@@ -88,9 +87,6 @@ async function runLoopTick(config: Configuration, state: Keeper) {
       await execTask(state, t);
     }
   }
-  // phase 2
-  // checnage Keepr.ts to State.ts
-  // add status, abi etc.
 
   // phase 3
   // await readPendingTransactionStatus(state.EthereumLastElectionsTx, state, config);

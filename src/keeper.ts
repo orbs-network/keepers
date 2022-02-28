@@ -1,16 +1,13 @@
 import Web3 from "web3";
-// import { Contract } from 'web3-eth-contract';
-
-// import { writeStatusToDisk } from './write/status';
 import { jsonStringifyComplexTypes, toNumber } from './helpers';
 import { TxData } from "@ethereumjs/tx";
 import { AbiItem } from "web3-utils"
-//import { Contract } from 'web3-eth-contract';
 import Signer from 'orbs-signer-client';
 import * as Logger from './logger';
 import { biSend } from "./bi";
 import { Configuration } from "./config";
 import { readFileSync, readdirSync } from 'fs';
+import { debugSign } from "./debugSigner";
 import _ from 'lodash';
 
 const GAS_LIMIT_HARD_LIMIT = 2000000;
@@ -54,7 +51,6 @@ export class Keeper {
         };
 
         this.nextTaskRun = {};
-        //this.pendingTx = { txHash: null, taskName: null, minInterval: null };
         // load all ABIs
         Logger.log(`loading abis at ${abiFolder}`);
 
@@ -118,8 +114,10 @@ export async function setGuardianEthAddr(state: Keeper, config: Configuration) {
     state.senderOrbsAddress = `0x${config.NodeOrbsAddress}`;
 
     try {
+        const curAddress = state.guardianAddress;
         state.guardianAddress = _.map(_.filter(state.management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress), 'EthAddress')[0];
-        Logger.log(`guardian address was set to ${state.guardianAddress}`);
+        if (curAddress !== state.guardianAddress)
+            Logger.log(`guardian address was set to ${state.guardianAddress}`);
 
     } catch (err) {
         Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
@@ -162,7 +160,6 @@ export function isLeader(state: Keeper) {
     biSend(state.status.config.BIUrl, bi);
 
     if (!state.status.isLeader) {
-
         state.nextTaskRun = {};
     }
     return state.status.isLeader;
@@ -226,20 +223,16 @@ export async function hasPendingTX(state: Keeper, task: any): Promise<boolean> {
     }
     let hasPending = false;
     let completed: Array<string> = [];
-    for (let txHash in task.pendingTX) {
-        // if already has pending dont continue
+    task.pendingTX.forEach(async (txHash: string) => {
         if (await isTXPending(state.web3, txHash)) {
             hasPending = true;
         } else {
             completed.push(txHash);
         }
-    }
+    });
     // remove completed
     for (let txHash in completed) {
-        var index = task.pendingTX.indexOf(txHash);
-        if (index !== -1) {
-            task.pendingTX[index].splice(index, 1);
-        }
+        task.pendingTX.delete(txHash);
     }
 
     //cleanup completed
@@ -247,15 +240,15 @@ export async function hasPendingTX(state: Keeper, task: any): Promise<boolean> {
 }
 
 //////////////////////////////////////
-// async function sign(state: Keeper, txObject: TxData) {
-//     // if (process.env.DEBUG) {
-//     //     Logger.log(`DEBUG mode - use debug signer`);
-//     //     return debugSign(txObject);
-//     // }
-//     // else {
-//     return await state.signer?.sign(txObject, state.chainId);
-//     //}
-// }
+async function sign(state: Keeper, txObject: TxData) {
+    if (process.env.DEBUG) {
+        Logger.log(`DEBUG mode - use debug signer`);
+        return debugSign(txObject);
+    }
+    else {
+        return await state.signer?.sign(txObject, state.chainId);
+    }
+}
 //////////////////////////////////////
 async function signAndSendTransaction(
     state: Keeper,
@@ -282,8 +275,7 @@ async function signAndSendTransaction(
 
     Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
 
-    const { rawTransaction, transactionHash } = await state.signer?.sign(txObject, state.chainId);
-    //const { rawTransaction, transactionHash } = await sign(state, txObject);
+    const { rawTransaction, transactionHash } = await sign(state, txObject);
 
     if (!rawTransaction || !transactionHash) {
         throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
@@ -339,7 +331,7 @@ async function sendNetworkContract(state: Keeper, task: any, network: string, co
 
     await signAndSendTransaction(state, encoded, contract.options.address).then(async (txhash) => {
         state.status.successTX.push(tx);
-        task.pendingTX.push(tx);
+        task.pendingTX.add(txhash);
         bi.txhash = txhash;
         await biSend(state.status.config.BIUrl, bi);
         Logger.log('SUCCESS:' + tx);
@@ -371,7 +363,6 @@ async function execNetworkAdress(state: Keeper, task: any, network: string, adrs
 
     }
     const contract = state.contracts[adrs];
-
     for (let send of task.send) {
         // has params
         if (send.params) {
