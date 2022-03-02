@@ -26,14 +26,6 @@ export async function runLoop(config: Configuration) {
 
   for (; ;) {
     try {
-      // has to be called before setGuardians for management
-      const statusOK = await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, keepers);
-      if (!statusOK) {
-        Logger.error(`readManagementStatus2 failed, url=${config.ManagementServiceEndpoint}`);
-        continue;
-      }
-
-      keepers.setGuardianEthAddr(config);
       // make sure tasks are visible in svc status
       keepers.status.tasks = tasksObj;
 
@@ -67,8 +59,10 @@ async function runLoopTick(config: Configuration, keepers: Keeper) {
 
   keepers.status.tickCount += 1;
 
-  // phase 1
+  // update management
   await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, keepers);
+  // update management and config
+  keepers.setGuardianEthAddr(config);
 
   // balance
   await keepers.getBalance(); /// ??? WHY check
