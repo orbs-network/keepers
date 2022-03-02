@@ -9,7 +9,7 @@ COPY package*.json ./
 COPY .version ./version
 COPY abi ./abi
 
-#RUN apk add --no-cache git
+RUN apk add --no-cache git
 RUN npm install
 COPY dist ./dist
 
