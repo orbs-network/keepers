@@ -18,6 +18,8 @@ export async function runLoop(config: Configuration) {
     config.RunLoopPollTimeSeconds = 10;
     console.log(`RunLoopPollTimeSeconds: 10 sec`);
   }
+  Logger.log(`ENV ALWAYS_LEADER: ${process.env.ALWAYS_LEADER}`);
+  Logger.log(`ENV NODE_ENV: ${process.env.NODE_ENV}`);
 
   // initialize status.json to make sure healthcheck passes from now on
   const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
