@@ -1,28 +1,23 @@
 import Web3 from "web3";
-import { jsonStringifyComplexTypes, toNumber } from './helpers';
-import { TxData } from "@ethereumjs/tx";
 import { AbiItem } from "web3-utils"
-import Signer from 'orbs-signer-client';
 import * as Logger from './logger';
 import { biSend } from "./bi";
 import { Configuration } from "./config";
 import { readFileSync, readdirSync } from 'fs';
-import { debugSign } from "./debugSigner";
+import { completeTX } from './tx'
+import Signer from 'orbs-signer-client';
 import _ from 'lodash';
 
-const GAS_LIMIT_HARD_LIMIT = 2000000;
 const MAX_LAST_TX = 10;
 const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
-
 const abiFolder = process.cwd() + '/abi/';
+
 //////////////////////////////////////
 export class Keeper {
     public abis: { [key: string]: AbiItem[] };
     public contracts: { [key: string]: any };
     public status: any;
     public management: any;
-    public gasPrice: string | undefined;
-
     public web3: Web3 | undefined;
     chainId: number | undefined;
     signer: Signer | undefined;
@@ -35,7 +30,6 @@ export class Keeper {
     constructor() {
         this.abis = {};
         this.contracts = {};
-        this.gasPrice = '';
         this.status = {
             start: Date.now(),
             tickCount: 0,
@@ -49,7 +43,6 @@ export class Keeper {
                 "BNB": 0
             }
         };
-
         this.nextTaskRun = {};
         // load all ABIs
         Logger.log(`loading abis at ${abiFolder}`);
@@ -111,7 +104,14 @@ export class Keeper {
     setGuardianEthAddr(config: Configuration) {
         // save config in status
         this.status.config = config;
+
+        // use con fig fields
         this.senderOrbsAddress = `0x${config.NodeOrbsAddress}`;
+        if (!this.signer) {
+            // only once
+            Logger.log(`signer init with  ${this.status.config.SignerEndpoint}`);
+            this.signer = new Signer(this.status.config.SignerEndpoint);
+        }
 
         try {
             const curAddress = this.guardianAddress;
@@ -127,8 +127,8 @@ export class Keeper {
 
     //////////////////////////////////////////////////////////////////
     isLeader() {
-        if (process.env.DEBUG) {
-            Logger.log(`DEBUG mode - Always selected as leader`);
+        if (process.env.DEBUG || process.env.ALWAYS_LEADER) {
+            //Logger.log(`DEBUG mode - Always selected as leader`);
             return true;
         }
         const committee = this.management.Payload.CurrentCommittee;
@@ -186,128 +186,22 @@ export class Keeper {
             return false;
         }
 
-        // TODO: add support: check if leader th is near and send tx
-
         if (Date.now() >= this.nextTaskRun[task.name]) {
-            Logger.log(`next slot run hit for ${task.name}`);
+            this.scheduleNextRun(task.name, task.minInterval);
             return true;
         }
 
         return false;
     }
 
-    async isTXPending(web3: Web3 | undefined, txHash: string): Promise<boolean> {
-        Logger.log(`checking txHash: ${txHash}`);
-        const tx = await web3!.eth.getTransaction(txHash);
-        if (tx == null || tx.blockNumber == null) {
-            Logger.log(`tx ${txHash} is still waiting for block.`);
-            return true; // still pending
-        }
-
-        const receipt = await web3!.eth.getTransactionReceipt(txHash);
-        if (receipt == null) {
-            Logger.log(`tx ${txHash} does not have receipt yet.`);
-            return true; // still pending
-        }
-
-        Logger.log(`available receipt for tx ${txHash}: ${JSON.stringify(receipt)}`);
-        return false;
-
-    }
-    //////////////////////////////////////////////////////////////////
-    async hasPendingTX(task: any): Promise<boolean> {
-        // creating pending tx set
-        if (!task.pendingTX) {
-            task.pendingTX = new Set<string>();
-            return false;
-        }
-        let hasPending = false;
-        let completed: Array<string> = [];
-        task.pendingTX.forEach(async (txHash: string) => {
-            if (await this.isTXPending(this.web3, txHash)) {
-                hasPending = true;
-            } else {
-                completed.push(txHash);
-            }
-        });
-        // remove completed
-        for (let txHash in completed) {
-            task.pendingTX.delete(txHash);
-        }
-
-        //cleanup completed
-        return hasPending;
-    }
-
-    //////////////////////////////////////
-    async sign(txObject: TxData) {
-        if (process.env.DEBUG) {
-            Logger.log(`DEBUG mode - use debug signer`);
-            return debugSign(txObject);
-        }
-        else {
-            return await this.signer?.sign(txObject, this.chainId);
-        }
-    }
-
-    //////////////////////////////////////
-    async signAndSendTransaction(
-        //task: any,
-        encodedAbi: string,
-        contractAddress: string,
-        //senderAddress: string,
-    ): Promise<string> {
-        const senderAddress = this.senderOrbsAddress;
-        const web3 = this.web3;
-        if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
-        if (!this.signer) throw new Error('Cannot send tx until signer is initialized.');
-
-        let nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
-        Logger.log(`senderAddress: ${senderAddress} nonce: ${nonce}`);
-
-        const txObject: TxData = {
-            to: contractAddress,
-            gasPrice: toNumber(this.gasPrice || '0') * 1.1,  // TODO: fixme only for testing
-            gasLimit: GAS_LIMIT_HARD_LIMIT,
-            data: encodedAbi,
-            nonce: nonce,
-        };
-
-        Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
-
-        const { rawTransaction, transactionHash } = await this.sign(txObject);
-
-        if (!rawTransaction || !transactionHash) {
-            throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
-        }
-
-        return new Promise<string>((resolve, reject) => {
-            // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
-            web3.eth
-                .sendSignedTransaction(rawTransaction, (err) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    else {
-                        resolve(transactionHash);
-
-                    }
-                })
-                .catch(() => {
-                    // do nothing (ignore the web3 promise)
-                });
-        });
-    }
-
     //////////////////////////////////////
     //async function sendContract(state: Keeper, task: any, senderAddress: string) {
-    async sendNetworkContract(task: any, network: string, contract: any, method: string, params: any) {
+    async sendNetworkContract(network: string, contract: any, method: string, params: any) {
 
         if (!this.web3) throw new Error('web3 client is not initialized.');
 
         const now = new Date();
         const dt = now.toISOString();
-        //let contract = new this.web3.eth.Contract(abi, addr);
         const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
 
         let bi: any = {
@@ -329,23 +223,34 @@ export class Keeper {
             encoded = contract.methods[method]().encodeABI();
         }
 
-        await this.signAndSendTransaction(encoded, contract.options.address).then(async (txhash) => {
+        if (process.env.NODE_ENV !== 'production') {
+            Logger.log(`NOT PRODUCTION - avoid sending ${tx}`);
+            return;
+        }
+
+        const retry = 5;
+        let info = { retry: 0, errors: null };
+        let completedTxHash = await completeTX(retry, this.web3, this.signer, encoded, contract.options.address, this.senderOrbsAddress, info);
+        // how many attempts
+        bi.retry = info.retry;
+
+        if (completedTxHash) {
             this.status.successTX.push(tx);
-            task.pendingTX.add(txhash);
-            bi.txhash = txhash;
+            bi.txhash = completedTxHash;
+
             await biSend(this.status.config.BIUrl, bi);
             Logger.log('SUCCESS:' + tx);
 
-        }).catch(async (err: Error) => {
+        } else {
             this.status.failTX.push(tx);
-            bi.success = false;
-            bi.error = err.message;
-            await biSend(this.status.config.BIUrl, bi);
-            Logger.error('signAndSendTransaction exception: ' + err.message);
-            Logger.log('FAIL:' + tx);
-        });
-    }
+            if (info.errors)
+                bi.errors = info.errors;
 
+            bi.success = false;
+            await biSend(this.status.config.BIUrl, bi);
+            Logger.error('signAndSendTransaction didnt complete: ' + tx);
+        };
+    }
     //////////////////////////////////////
     async execNetworkAdress(task: any, network: string, adrs: string) {
         // resolve abi
@@ -357,8 +262,8 @@ export class Keeper {
         // resolev contract
         if (!(adrs in this.contracts)) {
             this.contracts[adrs] = new this.web3!.eth.Contract(abi, adrs, {
-                from: this.senderOrbsAddress, // default from address
-                gasPrice: this.gasPrice // default gas price in wei, 20 gwei in this case
+                from: this.senderOrbsAddress // default from address
+                //gasPrice: this.gasPrice // default gas price in wei, 20 gwei in this case
             });
 
         }
@@ -367,11 +272,11 @@ export class Keeper {
             // has params
             if (send.params) {
                 for (let params of send.params) {
-                    await this.sendNetworkContract(task, network, contract, send.method, params);
+                    await this.sendNetworkContract(network, contract, send.method, params);
                 }
             } // no params
             else {
-                await this.sendNetworkContract(task, network, contract, send.method, null);
+                await this.sendNetworkContract(network, contract, send.method, null);
             }
         }
     }
@@ -406,9 +311,6 @@ export class Keeper {
                 return;
             }
 
-            // update before loop execution
-            this.gasPrice = await this.web3.eth.getGasPrice();
-
             //await sendContract(state, task, senderAddress);
             for (let network of task.networks) {
                 await this.execNetwork(task, network);
@@ -420,5 +322,3 @@ export class Keeper {
         }
     }
 }
-
-// ////////////////////////////////////////////////

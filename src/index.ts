@@ -2,14 +2,14 @@ import * as Logger from './logger';
 import { sleep } from './helpers';
 import { Configuration } from './config';
 import { writeStatusToDisk } from './write/status';
-import Signer from 'orbs-signer-client';
 import {
   initWeb3Client,
 } from './write/ethereum';
 
 import { readManagementStatus2 } from './leader'
-import { Keeper } from './keeper';//, isLeader, shouldExecTask, execTask, getBalance, setGuardianEthAddr, setStatus, hasPendingTX } from './keeper';
-import * as tasksObj from './tasks_orig.json';
+import { Keeper } from './keeper';
+import * as tasksObj from './tasks.json';
+
 
 export async function runLoop(config: Configuration) {
   const keepers = await initializeState(config);
@@ -71,28 +71,17 @@ async function runLoopTick(config: Configuration, keepers: Keeper) {
   // balance
   await keepers.getBalance(); /// ??? WHY check
 
-  // leader
-  if (!keepers.isLeader()) return;
-  Logger.log(`Node was selected as a leader`);
+  // leader  
+  const isLeader = keepers.isLeader();
 
   // tasks execution
   for (const t of tasksObj.tasks) {
-    if (await keepers.hasPendingTX(t)) {
-      Logger.log(`TXs are still not complited for task ${t.name}`)
-      return;
-    }
     if (keepers.shouldExecTask(t)) {
-
       // first call - after that, task sets the next execution
-      await keepers.execTask(t);
+      if (isLeader)
+        await keepers.execTask(t);
     }
   }
-
-  // phase 3
-  // await readPendingTransactionStatus(keepers.EthereumLastElectionsTx, state, config);
-
-  // phase 4
-  // code opt. + cleanups
 }
 
 // helpers
@@ -102,31 +91,7 @@ async function initializeState(config: Configuration): Promise<Keeper> {
 
   // const state = new State();
   await initWeb3Client(config.EthereumEndpoint, keepers);
-  keepers.signer = new Signer(config.SignerEndpoint);
   keepers.status.config = config;
 
   return keepers;
 }
-
-//
-// async function test() {
-//
-// 	const config : Configuration = {
-// 		"ManagementServiceEndpoint": "http://34.199.236.72/services/matic-reader",
-// 		"EthereumEndpoint": "https://speedy-nodes-nyc.moralis.io/e25f7625703c58a9068b9947/bsc/mainnet",
-// 		"SignerEndpoint": "http://signer:7777",
-// 		"EthereumDiscountGasPriceFactor": 1,
-// 		"NodeOrbsAddress": "9f0988cd37f14dfe95d44cf21f9987526d6147ba",
-// 		"StatusJsonPath": './status/status.json',
-// 		"RunLoopPollTimeSeconds": 60,
-// 		"BIUrl": "http://logs.orbs.network:3001/putes/keepersew",
-// 	}
-//
-// 	const keeper = await initializeState(config);
-//     const periodicCall = keeper.periodicUpdate.bind(keeper);
-// 	await periodicCall(config);
-// 	await keeper.dbgTask(`0x${config.NodeOrbsAddress}`);
-//
-// }
-//
-// test().then(console.log);
