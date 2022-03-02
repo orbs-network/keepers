@@ -90,10 +90,10 @@ export class Keeper {
     setStatus(): any {
         // keept last 5 tx
         if (this.status.successTX.length > MAX_LAST_TX) {
-            this.status.successTX.length.shift();
+            this.status.successTX.shift();
         }
         if (this.status.failTX.length > MAX_LAST_TX) {
-            this.status.failTX.length.shift();
+            this.status.failTX.shift();
         }
         this.status.uptime = this.getUptime();
         const now = new Date();

@@ -15,7 +15,7 @@
                     "method": "updateAllTvls"
                 }
             ],
-            "minInterval": 4
+            "minInterval": 480
         },
         {
             "name": "revault-update-pool",
@@ -46,7 +46,7 @@
                     ]
                 }
             ],
-            "minInterval": 10
+            "minInterval": 1440
         }
     ]
 }
