@@ -5,3 +5,5 @@ dist/
 node_modules/
 status/
 debug.json
+task_debug.json
+#tasks_orig.json
