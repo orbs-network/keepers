@@ -9,13 +9,13 @@ import { sleep } from './helpers';
 const GAS_LIMIT_HARD_LIMIT = 2000000;
 
 //////////////////////////////////////
-async function sign(signer: Signer, txObject: TxData) {
+async function sign(signer: Signer, txObject: TxData, chainId: number) {
     if (process.env.DEBUG) {
         Logger.log(`DEBUG mode - use debug signer`);
         return debugSign(txObject);
     }
     else {
-        return await signer?.sign(txObject)//, this.chainId); ?? NEEDED
+        return await signer?.sign(txObject, chainId);
     }
 }
 
@@ -60,12 +60,15 @@ export async function completeTX(
     if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
     if (!signer) throw new Error('Cannot send tx until signer is initialized.');
 
+    const chainId = await web3.eth.getChainId();
+
     let i = 0;
     let txHash: string = '';
+
     while (i < retry && !txHash) {
         i++;
         info.retry = i;
-        await signAndSendTransaction(web3, signer, encodedAbi, contractAddress, senderAddress).then(async (_txHash: string) => {
+        await signAndSendTransaction(web3, signer, chainId, encodedAbi, contractAddress, senderAddress).then(async (_txHash: string) => {
             txHash = _txHash;
             // wait for 60 seconds
             await waitForTX(web3, txHash, 60);
@@ -84,6 +87,7 @@ async function signAndSendTransaction(
     //task: any,
     web3: Web3,
     signer: Signer,
+    chainId: number,
     encodedAbi: string,
     contractAddress: string,
     senderAddress: string
@@ -105,7 +109,7 @@ async function signAndSendTransaction(
 
     Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
 
-    const { rawTransaction, transactionHash } = await sign(signer, txObject);
+    const { rawTransaction, transactionHash } = await sign(signer, txObject, chainId);
     if (!rawTransaction || !transactionHash) {
         throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
     }
