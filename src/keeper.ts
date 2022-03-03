@@ -5,11 +5,13 @@ import { biSend } from "./bi";
 import { Configuration } from "./config";
 import { readFileSync, readdirSync } from 'fs';
 import { completeTX } from './tx'
+import { Pacer } from "./pacer";
 import Signer from 'orbs-signer-client';
 import _ from 'lodash';
 
 const MAX_LAST_TX = 10;
-const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
+//const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
+const TASK_TIME_DIVISION_MIN = 13; // prime number to reduce task miss and span guardians more equally
 const abiFolder = process.cwd() + '/abi/';
 
 //////////////////////////////////////
@@ -19,9 +21,10 @@ export class Keeper {
     public status: any;
     public management: any;
     public web3: Web3 | undefined;
+    public pacer: Pacer;
     chainId: number | undefined;
     signer: Signer | undefined;
-    nextTaskRun: { [taskName: string]: number };
+    //nextTaskRun: { [taskName: string]: number };
     guardianAddress: string = '0x';
     senderOrbsAddress: string = '0x';
 
@@ -30,8 +33,10 @@ export class Keeper {
     constructor() {
         this.abis = {};
         this.contracts = {};
+        this.pacer = new Pacer();
         this.status = {
             start: Date.now(),
+            epochIndex: -1,
             tickCount: 0,
             isLeader: Boolean,
             leaderIndex: -1,
@@ -43,7 +48,7 @@ export class Keeper {
                 "BNB": 0
             }
         };
-        this.nextTaskRun = {};
+        //this.nextTaskRun = {};
         // load all ABIs
         Logger.log(`loading abis at ${abiFolder}`);
 
@@ -98,6 +103,9 @@ export class Keeper {
         this.status.uptime = this.getUptime();
         const now = new Date();
         this.status.lastUpdateUTC = now.toUTCString();
+
+        // epoch
+        this.status.epochIndex = this.pacer.getEpochIndex();
     }
 
     //////////////////////////////////////
@@ -126,17 +134,13 @@ export class Keeper {
     }
 
     //////////////////////////////////////////////////////////////////
-    isLeader() {
-        if (process.env.DEBUG || process.env.ALWAYS_LEADER) {
-            //Logger.log(`DEBUG mode - Always selected as leader`);
-            return true;
-        }
+    setLeader() {
         const committee = this.management.Payload.CurrentCommittee;
         const leaderIndex = this.currentLeaderIndex(committee);
 
         // same leader dont change
         if (leaderIndex === this.status.leaderIndex)
-            return;
+            return this.status.isLeader;
 
         // replace leader
         const leader = committee[leaderIndex];
@@ -157,42 +161,43 @@ export class Keeper {
             leaderName: leader.Name,
             leaderEthAddress: leader.EthAddress
         }
+        // bi leader changed
         biSend(this.status.config.BIUrl, bi);
-
-        if (!this.status.isLeader) {
-            this.nextTaskRun = {};
-        }
         return this.status.isLeader;
     }
 
     //////////////////////////////////////////////////////////////////
     currentLeaderIndex(committee: Array<any>): any {
-        return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
+        //return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
+        return Math.floor(this.pacer.getEpochIndex() / TASK_TIME_DIVISION_MIN) % committee.length;
     }
 
     //////////////////////////////////////////////////////////////////
-    scheduleNextRun(taskName: string, minInterval: number) {
-        const msInterval = minInterval * 60 * 1000;
-        this.nextTaskRun[taskName] = msInterval * Math.floor(Date.now() / msInterval) + msInterval;
-        const dt = new Date(this.nextTaskRun[taskName]);
-        Logger.log(`scheduled next run for task ${taskName} to ${dt.toISOString()}`);
-    }
+    // scheduleNextRun(taskName: string, intervalMinutes: number) {
+    //     const msInterval = intervalMinutes * 60 * 1000;
+    //     this.nextTaskRun[taskName] = msInterval * Math.floor(Date.now() / msInterval) + msInterval;
+    //     const dt = new Date(this.nextTaskRun[taskName]);
+    //     Logger.log(`scheduled next run for task ${taskName} to ${dt.toISOString()}`);
+    // }
 
     //////////////////////////////////////////////////////////////////
-    shouldExecTask(task: any) {
-        if (!(task.name in this.nextTaskRun)) {
-            Logger.log(`task ${task.name} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
-            this.scheduleNextRun(task.name, task.minInterval);
-            return false;
-        }
-
-        if (Date.now() >= this.nextTaskRun[task.name]) {
-            this.scheduleNextRun(task.name, task.minInterval);
-            return true;
-        }
-
-        return false;
+    isTimeToRun(task: any) {
+        return this.pacer.getEpochIndex() % task.intervalMinutes === 0;
     }
+    // shouldExecTask(task: any) {
+    //     if (!(task.name in this.nextTaskRun)) {
+    //         Logger.log(`task ${task.name} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
+    //         this.scheduleNextRun(task.name, task.intervalMinutes);
+    //         return false;
+    //     }
+
+    //     if (Date.now() >= this.nextTaskRun[task.name]) {
+    //         this.scheduleNextRun(task.name, task.intervalMinutes);
+    //         return true;
+    //     }
+
+    //     return false;
+    // }
 
     //////////////////////////////////////
     //async function sendContract(state: Keeper, task: any, senderAddress: string) {
@@ -300,7 +305,7 @@ export class Keeper {
             name: task.name,
             nodeName: this.status.myNode.Name,
             network: task.networks[0],
-            minInterval: task.minInterval,
+            intervalMinutes: task.intervalMinutes,
         }
         await biSend(this.status.config.BIUrl, bi);
 
@@ -320,5 +325,8 @@ export class Keeper {
             Logger.log(`Exception thrown from task: ${task.name}`);
             Logger.error(e);
         }
+        // next exec
+        let dt = new Date(Date.now() + task.intervalMinutes * 60 * 1000);
+        Logger.log(`NEXT execute for ${task.name}: ${dt.toISOString()}`);
     }
 }

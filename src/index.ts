@@ -8,21 +8,23 @@ import {
 
 import { readManagementStatus2 } from './leader'
 import { Keeper } from './keeper';
-import * as tasksObj from './tasks.json';
+import * as tasksObj from './task_debug.json';
 
+const alwaysLeader = (process.env.DEBUG === '1' || process.env.ALWAYS_LEADER === '1');
 
 export async function runLoop(config: Configuration) {
   const keepers = await initializeState(config);
   if (process.env.DEBUG) {
     Logger.log(`DEBUG mode -----------------`);
-    config.RunLoopPollTimeSeconds = 10;
-    console.log(`RunLoopPollTimeSeconds: 10 sec`);
+    //config.RunLoopPollTimeSeconds = 10;
+    //console.log(`RunLoopPollTimeSeconds: 10 sec`);
   }
+
   Logger.log(`ENV ALWAYS_LEADER: ${process.env.ALWAYS_LEADER}`);
   Logger.log(`ENV NODE_ENV: ${process.env.NODE_ENV}`);
 
   // initialize status.json to make sure healthcheck passes from now on
-  const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
+  //const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
   for (; ;) {
     try {
@@ -37,8 +39,9 @@ export async function runLoop(config: Configuration) {
       // main business logic
       await runLoopTick(config, keepers);
 
-      // SLEEP 2 minutes
-      const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
+      // SLEEP TODO: 30 sec minutes
+      // const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
+      const sleepTime = Math.floor(keepers.pacer.getEpochUnitMS() / 1.9);  // not /2 on pupose
       await sleep(sleepTime);
 
     } catch (err) {
@@ -54,7 +57,7 @@ export async function runLoop(config: Configuration) {
 
 // runs every 2 minutes in prod, 1 second in tests
 async function runLoopTick(config: Configuration, keepers: Keeper) {
-  if (keepers.status.tickCount % 10 === 0)
+  if (keepers.status.tickCount % 50 === 0)
     Logger.log(`Run loop waking up. tick: ${keepers.status.tickCount}`);
 
   keepers.status.tickCount += 1;
@@ -68,14 +71,13 @@ async function runLoopTick(config: Configuration, keepers: Keeper) {
   await keepers.getBalance(); /// ??? WHY check
 
   // leader  
-  const isLeader = keepers.isLeader();
+  const isLeader = keepers.setLeader() || alwaysLeader;
 
   // tasks execution
   for (const t of tasksObj.tasks) {
-    if (keepers.shouldExecTask(t)) {
-      // first call - after that, task sets the next execution
-      if (isLeader)
-        await keepers.execTask(t);
+    if (keepers.isTimeToRun(t) && isLeader) {
+      // first call - after that, task sets the next execution      
+      await keepers.execTask(t);
     }
   }
 }
