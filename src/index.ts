@@ -6,11 +6,7 @@ import {
   initWeb3Client,
 } from './write/ethereum';
 
-import { readManagementStatus2 } from './leader'
 import { Keeper } from './keeper';
-import * as tasksObj from './task_debug.json';
-
-const alwaysLeader = (process.env.DEBUG === '1' || process.env.ALWAYS_LEADER === '1');
 
 export async function runLoop(config: Configuration) {
   const keepers = await initializeState(config);
@@ -28,20 +24,15 @@ export async function runLoop(config: Configuration) {
 
   for (; ;) {
     try {
-      // make sure tasks are visible in svc status
-      keepers.status.tasks = tasksObj;
-
-      // updates the json
-      keepers.setStatus();
       // write status.json file, we don't mind doing this often (2min)
       writeStatusToDisk(config.StatusJsonPath, keepers.status);
 
       // main business logic
-      await runLoopTick(config, keepers);
+      await runLoopTick(keepers);
 
       // SLEEP TODO: 30 sec minutes
       // const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
-      const sleepTime = Math.floor(keepers.pacer.getEpochUnitMS() / 1.9);  // not /2 on pupose
+      const sleepTime = Math.floor(keepers.pacer.getEpochUnitMS() / 2.1);  // not /2 on pupose
       await sleep(sleepTime);
 
     } catch (err) {
@@ -56,30 +47,11 @@ export async function runLoop(config: Configuration) {
 }
 
 // runs every 2 minutes in prod, 1 second in tests
-async function runLoopTick(config: Configuration, keepers: Keeper) {
+async function runLoopTick(keepers: Keeper) {
   if (keepers.status.tickCount % 50 === 0)
     Logger.log(`Run loop waking up. tick: ${keepers.status.tickCount}`);
 
-  keepers.status.tickCount += 1;
-
-  // update management
-  await readManagementStatus2(config.ManagementServiceEndpoint, config.NodeOrbsAddress, keepers);
-  // update management and config
-  keepers.setGuardianEthAddr(config);
-
-  // balance
-  await keepers.getBalance(); /// ??? WHY check
-
-  // leader  
-  const isLeader = keepers.setLeader() || alwaysLeader;
-
-  // tasks execution
-  for (const t of tasksObj.tasks) {
-    if (keepers.isTimeToRun(t) && isLeader) {
-      // first call - after that, task sets the next execution      
-      await keepers.execTask(t);
-    }
-  }
+  await keepers.onTick();
 }
 
 // helpers

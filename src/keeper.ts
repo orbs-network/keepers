@@ -8,11 +8,16 @@ import { completeTX } from './tx'
 import { Pacer } from "./pacer";
 import Signer from 'orbs-signer-client';
 import _ from 'lodash';
+import { readManagementStatus2 } from './leader'
+import * as tasksObj from './tasks.json';
 
+//////////////////////////////////////
+// consts
 const MAX_LAST_TX = 10;
-//const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
-const TASK_TIME_DIVISION_MIN = 13; // prime number to reduce task miss and span guardians more equally
+const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
+//const TASK_TIME_DIVISION_MIN = 13; // prime number to reduce task miss and span guardians more equally
 const abiFolder = process.cwd() + '/abi/';
+const alwaysLeader = (process.env.DEBUG === '1' || process.env.ALWAYS_LEADER === '1');
 
 //////////////////////////////////////
 export class Keeper {
@@ -60,6 +65,9 @@ export class Keeper {
                 this.abis[name] = abi;
             }
         });
+
+        Logger.log('tasks---------------');
+        Logger.log(JSON.stringify(tasksObj, null, 2));
     }
 
     //////////////////////////////////////
@@ -171,34 +179,10 @@ export class Keeper {
         //return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
         return Math.floor(this.pacer.getEpochIndex() / TASK_TIME_DIVISION_MIN) % committee.length;
     }
-
-    //////////////////////////////////////////////////////////////////
-    // scheduleNextRun(taskName: string, intervalMinutes: number) {
-    //     const msInterval = intervalMinutes * 60 * 1000;
-    //     this.nextTaskRun[taskName] = msInterval * Math.floor(Date.now() / msInterval) + msInterval;
-    //     const dt = new Date(this.nextTaskRun[taskName]);
-    //     Logger.log(`scheduled next run for task ${taskName} to ${dt.toISOString()}`);
-    // }
-
     //////////////////////////////////////////////////////////////////
     isTimeToRun(task: any) {
-        return this.pacer.getEpochIndex() % task.intervalMinutes === 0;
+        return this.status.epochIndex % task.intervalMinutes === 0;
     }
-    // shouldExecTask(task: any) {
-    //     if (!(task.name in this.nextTaskRun)) {
-    //         Logger.log(`task ${task.name} has no entry in nextTaskRun ${JSON.stringify(this.nextTaskRun)}`);
-    //         this.scheduleNextRun(task.name, task.intervalMinutes);
-    //         return false;
-    //     }
-
-    //     if (Date.now() >= this.nextTaskRun[task.name]) {
-    //         this.scheduleNextRun(task.name, task.intervalMinutes);
-    //         return true;
-    //     }
-
-    //     return false;
-    // }
-
     //////////////////////////////////////
     //async function sendContract(state: Keeper, task: any, senderAddress: string) {
     async sendNetworkContract(network: string, contract: any, method: string, params: any) {
@@ -293,7 +277,7 @@ export class Keeper {
     }
     //////////////////////////////////////
     async execTask(task: any) {
-        Logger.log(`execute task: ${task.name}`);
+        Logger.log(`${task.name} execute task`);
         if (!task.active) {
             Logger.log(`task ${task.name} inactive`);
             return;
@@ -322,11 +306,47 @@ export class Keeper {
             }
 
         } catch (e) {
-            Logger.log(`Exception thrown from task: ${task.name}`);
+            Logger.log(`${task.name} Exception thrown during task`);
             Logger.error(e);
         }
         // next exec
+        var coeff = 1000 * 60 * 1;
         let dt = new Date(Date.now() + task.intervalMinutes * 60 * 1000);
-        Logger.log(`NEXT execute for ${task.name}: ${dt.toISOString()}`);
+        const rounded = new Date(Math.round(dt.getTime() / coeff) * coeff)
+        Logger.log(`${task.name} NEXT execution in ${task.intervalMinutes} epochs, after ${rounded.toISOString()}`);
+    }
+    //////////////////////////////////////
+    // tick should be more often then epoch index progress
+    // if epoch change - go forward
+    async onTick() {
+        this.status.tickCount += 1;
+        let curIndx = this.pacer.getEpochIndex()
+        // epoch hasnt change- DO NOTHING
+        if (this.status.epochIndex === curIndx) return;
+
+        this.status.epochIndex = curIndx;
+
+        try {
+            // update management
+            await readManagementStatus2(this.status.config.ManagementServiceEndpoint, this.status.config.NodeOrbsAddress, this);
+            // update management and config
+            this.setGuardianEthAddr(this.status.config);
+
+            // balance
+            await this.getBalance(); /// ??? WHY check
+        } catch (e) {
+            Logger.error('readManagementStatus2 + balance exception, continue with last call values');
+        }
+
+        // leader  
+        const isLeader = this.setLeader() || alwaysLeader;
+
+        // tasks execution
+        for (const t of tasksObj.tasks) {
+            if (this.isTimeToRun(t) && isLeader) {
+                // first call - after that, task sets the next execution      
+                await this.execTask(t);
+            }
+        }
     }
 }
