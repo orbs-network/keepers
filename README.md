@@ -75,8 +75,8 @@ The service is packaged as a Docker image. It is routinely published from this r
 ## Environment Variables
 | Field Name | Description |
 | ---------- | ----------- |
-| `PRODUCTION` | 1 means Transaction will be send during keepers task execution |
-| `DEBUG` | 1 means ALWAYS_LEADER-=1
+| `NODE_ENV` | ```production``` means transaction are sent during keepers task execution |
+| `DEBUG` | 1 means ALWAYS_LEADER 
 | `ALWAYS_LEADER` | 1 means leader election still happens and logged but this node always executes regardless |
 
 
