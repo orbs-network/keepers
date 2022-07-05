@@ -22,7 +22,7 @@
     "prebuild": "npm run clean",
     "build-local-docker": "docker build -t local/keepers .",
     "build-local-docker-platform": "docker buildx build --platform linux/x86-64 --no-cache -t local/keepers --push .",
-    "build": "tsc --skipLibCheck -p ./tsconfig.prod.json && ./boyar/create-version-file.sh && npm run build-local-docker-platform",
+    "build": "tsc --skipLibCheck -p ./tsconfig.prod.json && ./boyar/create-version-file.sh && npm run build-local-docker",
     "build:quick": "tsc --skipLibCheck -p ./tsconfig.prod.json",
     "test": "ava --verbose --serial",
     "test:quick": "echo '-- TEST --' && ava --verbose",
