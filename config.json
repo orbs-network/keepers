@@ -1,6 +1,6 @@
 {
     "ManagementServiceEndpoint": "http://34.199.236.72/services/matic-reader",
-    "EthereumEndpoint": "https://speedy-nodes-nyc.moralis.io/e25f7625703c58a9068b9947/bsc/mainnet",
+    "EthereumEndpoint": "https://bsc-dataseed1.binance.org/",
     "SignerEndpoint": "http://signer:7777",
     "EthereumDiscountGasPriceFactor": 1,
     "NodeOrbsAddress": "9f0988cd37f14dfe95d44cf21f9987526d6147ba",
