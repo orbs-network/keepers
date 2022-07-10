@@ -2,6 +2,7 @@ const fs = require('fs');
 const express = require('express');
 const app = express();
 const port = 8080;
+import { getCurrentClockTime } from 'helpers'
 
 let mockState = 'init';
 
@@ -13,7 +14,7 @@ app.get('/metrics', (req, res) => {
   if (mockState == 'synced') {
     data.BlockStorage.InOrderBlock.BlockTime.Value = now * 1e9;
   }
-  
+
   res.send(JSON.stringify(data));
 });
 
@@ -25,7 +26,3 @@ app.get('/change-mock-state/:state', (req, res) => {
 
 app.listen(port, () => console.log('Mock vchain started.'));
 
-// returns UTC clock time in seconds (similar to unix timestamp / Ethereum block time / RefTime)
-function getCurrentClockTime() {
-  return Math.round(new Date().getTime() / 1000);
-}

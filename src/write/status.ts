@@ -1,7 +1,8 @@
 //import * as Logger from '../logger';
 //import { State } from '../model/state';
 import { writeFileSync } from 'fs';
-import { ensureFileDirectoryExists } from '../helpers';//, JsonResponse, getCurrentClockTime, getTenDayPeriod }  ;
+import { getCurrentClockTime, ensureFileDirectoryExists, getCurrentVersion } from '../helpers'
+
 //import { weiToEth } from '../model/helpers';
 
 // const MINIMUM_ALLOWED_ETH_BALANCE_WEI = BigInt('100000000000000000'); // 0.1 ETH
@@ -10,47 +11,65 @@ import { ensureFileDirectoryExists } from '../helpers';//, JsonResponse, getCurr
 //const TX_SEND_FAILURE_TIMEOUT = 24 * 60 * 60; // seconds
 
 export function writeStatusToDisk(filePath: string, state: any) {
-  // const status: JsonResponse = {
-  //   Status: getStatusText(state),
-  //   Timestamp: new Date().toISOString(),
-  //   Payload: {
-  //     Uptime: getCurrentClockTime() - state.ServiceLaunchTime,
-  //     MemoryUsage: process.memoryUsage(),
-  //     Version: {
-  //       Semantic: state.CurrentVersion,
-  //     },
-  //     EthereumSyncStatus: state.EthereumSyncStatus,
-  //     VchainSyncStatus: state.VchainSyncStatus,
-  //     EthereumBalanceLastPollTime: state.EthereumBalanceLastPollTime,
-  //     EtherBalance: state.EtherBalance,
-  //     EthereumCanJoinCommitteeLastPollTime: state.EthereumCanJoinCommitteeLastPollTime,
-  //     EthereumConsecutiveTxTimeouts: state.EthereumConsecutiveTxTimeouts,
-  //     EthereumLastElectionsTx: state.EthereumLastElectionsTx,
-  //     EthereumLastVoteUnreadyTx: state.EthereumLastVoteUnreadyTx,
-  //     EthereumLastVoteUnreadyTime: state.EthereumLastVoteUnreadyTime,
-  //     EthereumCommittedTxStats: state.EthereumCommittedTxStats,
-  //     EthereumFeesStats: state.EthereumFeesStats,
-  //     VchainReputationsLastPollTime: state.VchainReputationsLastPollTime,
-  //     VchainReputations: state.VchainReputations,
-  //     VchainMetricsLastPollTime: state.VchainMetricsLastPollTime,
-  //     VchainMetrics: state.VchainMetrics,
-  //     ManagementLastPollTime: state.ManagementLastPollTime,
-  //     ManagementEthRefBlock: state.ManagementEthRefBlock,
-  //     ManagementInCommittee: state.ManagementInCommittee,
-  //     ManagementIsStandby: state.ManagementIsStandby,
-  //     ManagementMyElectionStatus: state.ManagementMyElectionsStatus,
-  //     TimeEnteredStandbyWithoutVcSync: state.TimeEnteredStandbyWithoutVcSync,
-  //     TimeEnteredBadReputation: state.TimeEnteredBadReputation,
-  //     TimeEnteredTopology: state.TimeEnteredTopology,
-  //     Config: config,
-  //   },
-  // };
-
-  // include error field if found errors
-  // const errorText = getErrorText(state, err);
-  // if (errorText) {
-  //   status.Error = errorText;
+  // ServiceLaunchTime: Date.now(),
+  // epochIndex: -1,
+  // tickCount: 0,
+  // isLeader: Boolean,
+  // leaderIndex: -1,
+  // leaderName: '',
+  // successTX: [],
+  // failTX: [],
+  // lastUpdate: '',
+  // balance: {
+  //     "BNB": 0
   // }
+  const statusText = `tickCount: ${state.tickCount}, leaderName: ${state.leaderName}`
+  const status: any = {
+    Status: statusText,
+    Timestamp: new Date().toISOString(),
+    Payload: {
+      Uptime: getCurrentClockTime() - state.ServiceLaunchTime,
+      MemoryUsage: process.memoryUsage(),
+      Version: {
+        Semantic: getCurrentVersion(),
+      },
+      ...state
+    }
+    //     EthereumSyncStatus: state.EthereumSyncStatus,
+    //     VchainSyncStatus: state.VchainSyncStatus,
+    //     EthereumBalanceLastPollTime: state.EthereumBalanceLastPollTime,
+    //     EtherBalance: state.EtherBalance,
+    //     EthereumCanJoinCommitteeLastPollTime: state.EthereumCanJoinCommitteeLastPollTime,
+    //     EthereumConsecutiveTxTimeouts: state.EthereumConsecutiveTxTimeouts,
+    //     EthereumLastElectionsTx: state.EthereumLastElectionsTx,
+    //     EthereumLastVoteUnreadyTx: state.EthereumLastVoteUnreadyTx,
+    //     EthereumLastVoteUnreadyTime: state.EthereumLastVoteUnreadyTime,
+    //     EthereumCommittedTxStats: state.EthereumCommittedTxStats,
+    //     EthereumFeesStats: state.EthereumFeesStats,
+    //     VchainReputationsLastPollTime: state.VchainReputationsLastPollTime,
+    //     VchainReputations: state.VchainReputations,
+    //     VchainMetricsLastPollTime: state.VchainMetricsLastPollTime,
+    //     VchainMetrics: state.VchainMetrics,
+    //     ManagementLastPollTime: state.ManagementLastPollTime,
+    //     ManagementEthRefBlock: state.ManagementEthRefBlock,
+    //     ManagementInCommittee: state.ManagementInCommittee,
+    //     ManagementIsStandby: state.ManagementIsStandby,
+    //     ManagementMyElectionStatus: state.ManagementMyElectionsStatus,
+    //     TimeEnteredStandbyWithoutVcSync: state.TimeEnteredStandbyWithoutVcSync,
+    //     TimeEnteredBadReputation: state.TimeEnteredBadReputation,
+    //     TimeEnteredTopology: state.TimeEnteredTopology,
+    //     Config: config,
+    //   },
+    // };
+
+    // include error field if found errors
+    // const errorText = getErrorText(state, err);
+    // if (errorText) {
+    //   status.Error = errorText;
+    // }
+  }
+  if (state.error)
+    status.Error = state.error;
 
   // do the actual writing to local file
   ensureFileDirectoryExists(filePath);
@@ -62,6 +81,7 @@ export function writeStatusToDisk(filePath: string, state: any) {
   // log progress
   //Logger.log(`Wrote status JSON to ${filePath} (${content.length} bytes).`);
 }
+
 
 // helpers
 

@@ -40,7 +40,7 @@ export class Keeper {
         this.contracts = {};
         this.pacer = new Pacer();
         this.status = {
-            start: Date.now(),
+            ServiceLaunchTime: Date.now(),
             epochIndex: -1,
             tickCount: 0,
             isLeader: Boolean,
@@ -73,7 +73,7 @@ export class Keeper {
     //////////////////////////////////////
     getUptime(): string {
         // get total seconds between the times
-        var delta = Math.abs(Date.now() - this.status.start) / 1000;
+        var delta = Math.abs(Date.now() - this.status.ServiceLaunchTime) / 1000;
 
         // calculate (and subtract) whole days
         var days = Math.floor(delta / 86400);
@@ -237,7 +237,7 @@ export class Keeper {
 
             bi.success = false;
             await biSend(this.status.config.BIUrl, bi);
-            Logger.error('signAndSendTransaction didnt complete: ' + tx);
+            throw new Error('signAndSendTransaction didnt complete: ' + tx);
         };
     }
     //////////////////////////////////////
@@ -245,7 +245,7 @@ export class Keeper {
         // resolve abi
         const abi = this.abis[task.abi];
         if (!abi) {
-            return Logger.error(`abi ${task.abi} does not exist in folder`);
+            throw new Error(`abi ${task.abi} does not exist in folder`);
         }
 
         // resolev contract
@@ -276,7 +276,7 @@ export class Keeper {
         }
     }
     //////////////////////////////////////
-    async execTask(task: any) {
+    async execTask(task: any, errors: Array<string>) {
         Logger.log(`${task.name} execute task`);
         if (!task.active) {
             Logger.log(`task ${task.name} inactive`);
@@ -294,20 +294,15 @@ export class Keeper {
         await biSend(this.status.config.BIUrl, bi);
 
         try {
-
-            if (!this.web3) {
-                Logger.error('web3 client is not initialized.');
-                return;
-            }
-
             //await sendContract(state, task, senderAddress);
             for (let network of task.networks) {
                 await this.execNetwork(task, network);
             }
 
         } catch (e) {
-            Logger.log(`${task.name} Exception thrown during task`);
-            Logger.error(e);
+            const errText = `$task:{task.name} Exception: ${e}\n`;
+            errors.push(errText);
+            Logger.error(errText);
         }
         // next exec
         var coeff = 1000 * 60 * 1;
@@ -331,21 +326,39 @@ export class Keeper {
             await readManagementStatus2(this.status.config.ManagementServiceEndpoint, this.status.config.NodeOrbsAddress, this);
             // update management and config
             this.setGuardianEthAddr(this.status.config);
-
-            // balance
-            await this.getBalance(); /// ??? WHY check
         } catch (e) {
+            this.status.error = `readManagementStatus2 + balance exception: ${e}\n`;
             Logger.error('readManagementStatus2 + balance exception, continue with last call values');
         }
 
         // leader  
         const isLeader = this.setLeader() || alwaysLeader;
+        let taskExecuted: boolean = false;
+
+        if (!this.web3) {
+            this.status.error = 'web3 client is not initialized.';
+            Logger.error(this.status.error);
+            return;
+        }
+
+        let errors: Array<string> = [];
 
         // tasks execution
         for (const t of tasksObj.tasks) {
             if (this.isTimeToRun(t) && isLeader) {
                 // first call - after that, task sets the next execution      
-                await this.execTask(t);
+                await this.execTask(t, errors);
+                taskExecuted = true;
+            }
+        }
+        if (taskExecuted) {
+            // balance
+            await this.getBalance(); /// update balance after tx send
+            // clear errors
+            this.status.error = "";
+            // add exceptions if thrown
+            for (let e of errors) {
+                this.status.error += e + '\n';
             }
         }
     }

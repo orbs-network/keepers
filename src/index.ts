@@ -23,10 +23,9 @@ export async function runLoop(config: Configuration) {
   //const runLoopPoolTimeMilli = 1000 * config.RunLoopPollTimeSeconds;
 
   for (; ;) {
+    // write status.json file, we don't mind doing this often (2min)
+    writeStatusToDisk(config.StatusJsonPath, keepers.status);
     try {
-      // write status.json file, we don't mind doing this often (2min)
-      writeStatusToDisk(config.StatusJsonPath, keepers.status);
-
       // main business logic
       await runLoopTick(keepers);
 
@@ -41,7 +40,7 @@ export async function runLoop(config: Configuration) {
 
       // always write status.json file (and pass the error)
       keepers.status.error = err.stack;
-      writeStatusToDisk(config.StatusJsonPath, keepers);
+      writeStatusToDisk(config.StatusJsonPath, keepers.status);
     }
   }
 }

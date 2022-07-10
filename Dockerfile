@@ -15,7 +15,7 @@ RUN apk add --no-cache git
 RUN npm install
 COPY dist ./dist
 
-#ENV NODE_ENV        production
-ENV NODE_ENV        debug_leader
+ENV NODE_ENV        production
+#ENV NODE_ENV        debug_leader
 
 CMD [ "npm", "start" ]
