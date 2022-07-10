@@ -1,7 +1,7 @@
 {
   "name": "@orbs-network/keepers",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "Node service to execute tasks on EVMs given by config",
   "author": "Yuval Aviguy <yuval@gmail.com>",
   "license": "MIT",
