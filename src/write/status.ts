@@ -75,7 +75,7 @@ export function writeStatusToDisk(filePath: string, state: any) {
   ensureFileDirectoryExists(filePath);
   // state.config = config;
   // state.error = err;
-  const content = JSON.stringify(state, null, 2);
+  const content = JSON.stringify(status, null, 2);
   writeFileSync(filePath, content);
 
   // log progress
