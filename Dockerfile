@@ -2,7 +2,7 @@
 FROM --platform=linux/x86-64 node:16-alpine
 
 # fix gyp during npm i
-#RUN apk update && apk add python3 make g++
+RUN apk update && apk add python3 make g++
 
 WORKDIR /opt/orbs
 
