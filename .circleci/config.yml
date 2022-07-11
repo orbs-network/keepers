@@ -22,7 +22,7 @@ jobs:
       #     command: npm run start:eth
       #     background: true
       #- run: mkdir -p _out/unit _out/e2e
-      - run: mkdir -p _out
+      - run: mkdir -p _out/unit
       - run: npm test --  --timeout=5m --tap --no-color > _out/unit/test.xml
       - run: npm run build
       #- run: npm run test:e2e --  --timeout=10m --tap --no-color| npx tap-xunit > _out/e2e/test.xml
