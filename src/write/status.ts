@@ -1,7 +1,7 @@
 //import * as Logger from '../logger';
 //import { State } from '../model/state';
 import { writeFileSync } from 'fs';
-import { getCurrentClockTime, ensureFileDirectoryExists, getCurrentVersion } from '../helpers'
+import { ensureFileDirectoryExists, getCurrentVersion } from '../helpers'
 
 //import { weiToEth } from '../model/helpers';
 
@@ -11,24 +11,12 @@ import { getCurrentClockTime, ensureFileDirectoryExists, getCurrentVersion } fro
 //const TX_SEND_FAILURE_TIMEOUT = 24 * 60 * 60; // seconds
 
 export function writeStatusToDisk(filePath: string, state: any) {
-  // ServiceLaunchTime: Date.now(),
-  // epochIndex: -1,
-  // tickCount: 0,
-  // isLeader: Boolean,
-  // leaderIndex: -1,
-  // leaderName: '',
-  // successTX: [],
-  // failTX: [],
-  // lastUpdate: '',
-  // balance: {
-  //     "BNB": 0
-  // }
   const statusText = `tickCount: ${state.tickCount}, leaderName: ${state.leaderName}`
   const status: any = {
     Status: statusText,
     Timestamp: new Date().toISOString(),
     Payload: {
-      Uptime: getCurrentClockTime() - state.ServiceLaunchTime,
+      Uptime: Math.round((Date.now() - state.ServiceLaunchTime) / 1000),
       MemoryUsage: process.memoryUsage(),
       Version: {
         Semantic: getCurrentVersion(),

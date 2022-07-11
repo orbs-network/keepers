@@ -71,7 +71,7 @@ export class Keeper {
     }
 
     //////////////////////////////////////
-    getUptime(): string {
+    getHumanUptime(): string {
         // get total seconds between the times
         var delta = Math.abs(Date.now() - this.status.ServiceLaunchTime) / 1000;
 
@@ -108,12 +108,12 @@ export class Keeper {
         if (this.status.failTX.length > MAX_LAST_TX) {
             this.status.failTX.shift();
         }
-        this.status.uptime = this.getUptime();
+        this.status.humanUptime = this.getHumanUptime(); //human uptime
         const now = new Date();
         this.status.lastUpdateUTC = now.toUTCString();
 
         // epoch
-        this.status.epochIndex = this.pacer.getEpochIndex();
+        // move to onTick - this.status.epochIndex = this.pacer.getEpochIndex();
     }
 
     //////////////////////////////////////

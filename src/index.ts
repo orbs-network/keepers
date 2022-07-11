@@ -24,6 +24,7 @@ export async function runLoop(config: Configuration) {
 
   for (; ;) {
     // write status.json file, we don't mind doing this often (2min)
+    keepers.setStatus();
     writeStatusToDisk(config.StatusJsonPath, keepers.status);
     try {
       // main business logic
