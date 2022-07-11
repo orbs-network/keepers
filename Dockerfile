@@ -11,7 +11,7 @@ COPY config.json ./
 COPY .version ./version
 COPY abi ./abi
 
-#RUN apk add --no-cache daemontools --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
+RUN apk add --no-cache daemontools --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
 RUN apk add --no-cache git
 RUN npm install
 COPY dist ./dist
