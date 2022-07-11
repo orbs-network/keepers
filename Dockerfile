@@ -7,6 +7,7 @@ FROM --platform=linux/x86-64 node:14-alpine
 WORKDIR /opt/orbs
 
 COPY package*.json ./
+COPY config.json ./
 COPY .version ./version
 COPY abi ./abi
 
