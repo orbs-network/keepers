@@ -1,5 +1,5 @@
 #FROM node:14-alpine
-FROM --platform=linux/x86-64 node:14-alpine
+FROM --platform=linux/x86-64 node:16-alpine
 
 # fix gyp during npm i
 #RUN apk update && apk add python3 make g++
