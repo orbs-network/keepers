@@ -1,6 +1,7 @@
 .idea/
 .version
 dist/
+_out/
 .DS_Store
 node_modules/
 status/
