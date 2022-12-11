@@ -28,10 +28,14 @@ export async function runLoop(config: Configuration) {
     writeStatusToDisk(config.StatusJsonPath, keepers.status);
     try {
       // main business logic
-      await runLoopTick(keepers);
+      // runs every 2 minutes in prod, 1 second in tests
+      if (keepers.status.tickCount % 100 === 0)
+        Logger.log(`Run loop waking up. tick: ${keepers.status.tickCount}`);
+
+      await keepers.onTick();
 
       // SLEEP TODO: 30 sec minutes
-      // const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * runLoopPoolTimeMilli) // align to tick interval
+      // const sleepTime = runLoopPoolTimeMilli - (Date.now() - Math.floor(Date.now() / runLoopPoolTimeMilli) * 
       const sleepTime = Math.floor(keepers.pacer.getEpochUnitMS() / 2.1);  // not /2 on pupose
       await sleep(sleepTime);
 
@@ -46,16 +50,8 @@ export async function runLoop(config: Configuration) {
   }
 }
 
-// runs every 2 minutes in prod, 1 second in tests
-async function runLoopTick(keepers: Keeper) {
-  if (keepers.status.tickCount % 50 === 0)
-    Logger.log(`Run loop waking up. tick: ${keepers.status.tickCount}`);
-
-  await keepers.onTick();
-}
 
 // helpers
-
 async function initializeState(config: Configuration): Promise<Keeper> {
   const keepers = new Keeper()
 

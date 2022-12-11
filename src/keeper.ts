@@ -10,6 +10,7 @@ import Signer from 'orbs-signer-client';
 import _ from 'lodash';
 import { readManagementStatus2 } from './leader'
 import * as tasksObj from './tasks.json';
+import { getCurrentClockTime } from './helpers';
 
 //////////////////////////////////////
 // consts
@@ -327,8 +328,11 @@ export class Keeper {
             // update management and config
             this.setGuardianEthAddr(this.status.config);
         } catch (e) {
-            this.status.error = `readManagementStatus2 + balance exception: ${e}\n`;
-            Logger.error('readManagementStatus2 + balance exception, continue with last call values');
+            Logger.error(`readManagementStatus2 error: ${e} continue with last call values`);
+            //register stale error if pollTime is > 10min
+            const deltaMinutes = Math.round((getCurrentClockTime() - this.status.ManagementLastPollTime) / 60)
+            if (deltaMinutes > 10)
+                this.status.error = `management data is stale over $}\n`;
         }
 
         // leader  
