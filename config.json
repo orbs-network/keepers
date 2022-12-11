@@ -1,8 +1,8 @@
 {
-    "ManagementServiceEndpoint": "http://34.235.246.172/services/management-service",
-    "EthereumEndpoint": "https://speedy-nodes-nyc.moralis.io/e25f7625703c58a9068b9947/bsc/mainnet",
+    "ManagementServiceEndpoint": "http://34.199.236.72/services/matic-reader",
+    "EthereumEndpoint": "https://bsc-dataseed1.binance.org/",
     "SignerEndpoint": "http://signer:7777",
     "EthereumDiscountGasPriceFactor": 1,
     "NodeOrbsAddress": "9f0988cd37f14dfe95d44cf21f9987526d6147ba",
-    "BIUrl": "http://logs.orbs.network:3001/putes/keepersew"
+    "BIUrl": "http://logs.orbs.network:3001/putes/keepers-ew"
 }
