@@ -12,24 +12,18 @@ export async function readManagementStatus(endpoint: string, myOrbsAddress: stri
 
   state.ManagementRefTime = response.Payload.CurrentRefTime;
   state.ManagementEthRefBlock = response.Payload.CurrentRefBlock;
-  state.ManagementVirtualChains = response.Payload.CurrentVirtualChains;
   state.ManagementCurrentCommittee = response.Payload.CurrentCommittee;
   state.ManagementCurrentStandbys = _.filter(response.Payload.CurrentCandidates, (node) => node.IsStandby);
   state.ManagementCurrentTopology = response.Payload.CurrentTopology;
   state.ManagementEthToOrbsAddress = _.mapValues(response.Payload.Guardians, (node) => node.OrbsAddress);
 
-  const myEthAddress = findEthFromOrbsAddress(myOrbsAddress, state);
-  state.ManagementInCommittee = response.Payload.CurrentCommittee.some((node) => node.EthAddress == myEthAddress);
-  state.ManagementIsStandby = state.ManagementCurrentStandbys.some((node) => node.EthAddress == myEthAddress);
-  state.ManagementMyElectionsStatus = response.Payload.Guardians[myEthAddress]?.ElectionsStatus;
-  state.ManagementOthersElectionsStatus = _.mapValues(response.Payload.Guardians, (node) => node.ElectionsStatus);
-  delete state.ManagementOthersElectionsStatus[myEthAddress];
+  state.MyGuardianAddress = findEthFromOrbsAddress(myOrbsAddress, state);
 
   // last to be after all possible exceptions and processing delays
   state.ManagementLastPollTime = getCurrentClockTime();
 
   // log progress
-  Logger.log(`Fetched management service, num vchains: ${Object.keys(state.ManagementVirtualChains).length}.`);
+  // Logger.log(`Fetched management service, num vchains: ${Object.keys(state.ManagementVirtualChains).length}.`);
 }
 
 // helpers
