@@ -11,7 +11,7 @@ export class State {
   gasPrice: string | undefined;
 
   chainId: number | undefined;
-  pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null} = { txHash: null, taskName: null, taskInterval: null };
+  pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null } = { txHash: null, taskName: null, taskInterval: null };
   nextTaskRun: { [taskName: string]: number } = {};
   MyGuardianAddress: string = '0x';
 

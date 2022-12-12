@@ -1,346 +1,374 @@
 import Web3 from "web3";
-// import { Contract } from 'web3-eth-contract';
-import { State } from './model/state';
-
-// import { writeStatusToDisk } from './write/status';
-import { jsonStringifyComplexTypes, toNumber } from './helpers';
-import { TxData } from "@ethereumjs/tx";
-
-import Signer from 'orbs-signer-client';
+import { AbiItem } from "web3-utils"
 import * as Logger from './logger';
-// import { biSend } from "./bi";
-// import {EthereumcanSendTx} from "./model/state";
+import { biSend } from "./bi";
+import { Configuration } from "./config";
+import { readFileSync, readdirSync } from 'fs';
+import { completeTX } from './tx'
+import { Pacer } from "./pacer";
+import Signer from 'orbs-signer-client';
 import _ from 'lodash';
+import { readManagementStatus2 } from './leader'
+import * as tasksObj from './tasks.json';
+import { getCurrentClockTime } from './helpers';
 
-const GAS_LIMIT_HARD_LIMIT = 2000000;
-//const MAX_LAST_TX = 10;
-const EPOCH_DURATION_MINUTES = 31; // prime number to reduce task miss and span guardians more equally
+//////////////////////////////////////
+// consts
+const MAX_LAST_TX = 10;
+const TASK_TIME_DIVISION_MIN = 167; // prime number to reduce task miss and span guardians more equally
+//const TASK_TIME_DIVISION_MIN = 13; // prime number to reduce task miss and span guardians more equally
+const abiFolder = process.cwd() + '/abi/';
+const alwaysLeader = (process.env.DEBUG === '1' || process.env.ALWAYS_LEADER === '1');
 
 //////////////////////////////////////
 export class Keeper {
-    // private abis: { [key: string]: AbiItem[] };
-    // private contracts: { [key: string]: Contract};
+    public abis: { [key: string]: AbiItem[] };
+    public contracts: { [key: string]: any };
     public status: any;
-    public validEthAddress: string;
     public management: any;
-    public gasPrice: string | undefined;
-
-    web3: Web3 | undefined;
+    public web3: Web3 | undefined;
+    public pacer: Pacer;
     chainId: number | undefined;
     signer: Signer | undefined;
-    pendingTx: { txHash: string | null, taskName: string | null, taskInterval: number | null };
-    nextTaskRun: { [taskName: string]: number };
+    //nextTaskRun: { [taskName: string]: number };
     guardianAddress: string = '0x';
+    senderOrbsAddress: string = '0x';
+
 
     //////////////////////////////////////
     constructor() {
-        // this.abis = {};
-        // this.contracts = {};
-        this.gasPrice = '';
-        this.validEthAddress = '';
+        this.abis = {};
+        this.contracts = {};
+        this.pacer = new Pacer();
         this.status = {
-            start: Date.now(),
+            ServiceLaunchTime: Date.now(),
+            epochIndex: -1,
+            tickCount: 0,
             isLeader: Boolean,
-            successTX: [],
-            //failedTX: [],
-            periodicUpdates: 0,
-            lastUpdate: '',
             leaderIndex: -1,
             leaderName: '',
+            successTX: [],
+            failTX: [],
+            lastUpdate: '',
             balance: {
                 "BNB": 0
             }
         };
-
-        this.nextTaskRun = {};
-        this.pendingTx = { txHash: null, taskName: null, taskInterval: null };
+        //this.nextTaskRun = {};
         // load all ABIs
-        // Logger.log(`loading abis at ${abiFolder}`);
-        // let files = ['./abi/revault-pool.json', './abi/revault-tvl.json'];
-        // TODO: change just for dbg
+        Logger.log(`loading abis at ${abiFolder}`);
 
-        // let abi = JSON.parse(REVAULT_POOL_ABI);
-        // this.abis['REVAULT_POOL_ABI'] = REVAULT_POOL_ABI;
+        readdirSync(abiFolder).forEach(file => {
+            Logger.log(`loading ABI file: ${file}`);
+            let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
+            if (abi) {
+                var name = file.substring(0, file.lastIndexOf('.')) || file;
+                this.abis[name] = abi;
+            }
+        });
 
-        // readdirSync(abiFolder).forEach(file => {
-        //     Logger.log(`loading ABI file: ${file}`);
-        //     let abi = JSON.parse(readFileSync(abiFolder + file, 'utf8'));
-        //     if (abi) {
-        //         var name = file.substring(0, file.lastIndexOf('.')) || file;
-        //         this.abis[name] = abi;
-        //     }
-        // });
-    }
-}
-// TODO: restore with status
-//////////////////////////////////////
-// function getUptime(state: State): string {
-//     // get total seconds between the times
-//     var delta = Math.abs(Date.now() - state.status.start) / 1000;
-
-//     // calculate (and subtract) whole days
-//     var days = Math.floor(delta / 86400);
-//     delta -= days * 86400;
-
-//     // calculate (and subtract) whole hours
-//     var hours = Math.floor(delta / 3600) % 24;
-//     delta -= hours * 3600;
-
-//     // calculate (and subtract) whole minutes
-//     var minutes = Math.floor(delta / 60) % 60;
-//     delta -= minutes * 60;
-
-//     // what's left is seconds
-//     var seconds = delta % 60;  // in theory the modulus is not required
-
-//     return `${days} days : ${hours}:${minutes}:${seconds}`;
-// }
-//////////////////////////////////////
-// export function setStatus(state: State): any {
-//     // keept last 5 tx
-//     if (state.status?.successTX.length > MAX_LAST_TX) {
-//         state.status.successTX.length.shift();
-//     }
-//     if (state.status?.failTX.length > MAX_LAST_TX) {
-//         state.status.failTX.length.shift();
-//     }
-//     state.status.uptime = getUptime(state);
-// }
-
-//////////////////////////////////////////////////////////////////
-export function setLeader(state: State) {
-    state.status.isLeader = isLeader(state.ManagementCurrentCommittee, state.MyGuardianAddress);
-    if (!state.status.isLeader) {
-        Logger.log(`Node was not selected as a leader`);
-        const currLeader = currentLeader(state.management.Payload.CurrentCommittee).EthAddress;
-        Logger.log(`Current leader eth address: ${currLeader}`);
-
-        state.nextTaskRun = {};
-        return;
-    }
-}
-
-function currentLeader(committee: Array<any>): any { // currentLeader
-    return committee[Math.floor(Date.now() / (EPOCH_DURATION_MINUTES * 60000)) % committee.length];
-}
-
-//////////////////////////////////////////////////////////////////
-export function isLeader(committee: Array<any>, address: string): boolean {
-    const currentLeaderInfo = currentLeader(committee);
-    Logger.log(`currentLeaderInfo: ${JSON.stringify(currentLeaderInfo)}`);
-    Logger.log(`Force set of node to current leader (address=${address})`);
-    return true; // TODO: tmp should be removed
-    // return currentLeaderInfo.EthAddress === address; // TODO: tmp should be uncomment
-}
-
-//////////////////////////////////////////////////////////////////
-function scheduleNextRun(state: State, taskName: string, taskInterval: number) {
-    state.nextTaskRun[taskName] = taskInterval * Math.floor(Date.now() / taskInterval) + taskInterval;
-    Logger.log(`scheduled next run for task ${taskName} to ${JSON.stringify(state.nextTaskRun[taskName])}`);
-}
-
-//////////////////////////////////////////////////////////////////
-export function shouldSendTx(state: State, taskName: string, taskInterval: number) {
-
-    if (!(taskName in state.nextTaskRun)) {
-        Logger.log(`task ${taskName} has no entry in nextTaskRun ${JSON.stringify(state.nextTaskRun)}`);
-        scheduleNextRun(state, taskName, taskInterval);
-        return false;
+        Logger.log('tasks---------------');
+        Logger.log(JSON.stringify(tasksObj, null, 2));
     }
 
-    // TODO: add support: check if leader th is near and send tx
+    //////////////////////////////////////
+    getHumanUptime(): string {
+        // get total seconds between the times
+        var delta = Math.abs(Date.now() - this.status.ServiceLaunchTime) / 1000;
 
-    if (Date.now() >= state.nextTaskRun[taskName]) {
-        Logger.log(`next slot run hit for ${taskName}`);
-        return true;
+        // calculate (and subtract) whole days
+        var days = Math.floor(delta / 86400);
+        delta -= days * 86400;
+
+        // calculate (and subtract) whole hours
+        var hours = Math.floor(delta / 3600) % 24;
+        delta -= hours * 3600;
+
+        // calculate (and subtract) whole minutes
+        var minutes = Math.floor(delta / 60) % 60;
+        delta -= minutes * 60;
+
+        // what's left is seconds
+        var seconds = delta % 60;  // in theory the modulus is not required
+
+        return `${days} days : ${hours}:${minutes}:${seconds}`;
+    }
+    //////////////////////////////////////
+    async getBalance() {
+        const senderAddress = `0x${this.status.config.NodeOrbsAddress}`;
+        if (!this.web3) throw new Error('web3 client is not initialized.');
+
+        this.status.balance.BNB = await this.web3.eth.getBalance(senderAddress);
+    }
+    //////////////////////////////////////
+    setStatus(): any {
+        // keept last 5 tx
+        if (this.status.successTX.length > MAX_LAST_TX) {
+            this.status.successTX.shift();
+        }
+        if (this.status.failTX.length > MAX_LAST_TX) {
+            this.status.failTX.shift();
+        }
+        this.status.humanUptime = this.getHumanUptime(); //human uptime
+        const now = new Date();
+        this.status.lastUpdateUTC = now.toUTCString();
+
+        // epoch
+        // move to onTick - this.status.epochIndex = this.pacer.getEpochIndex();
     }
 
-    return false;
-}
+    //////////////////////////////////////
+    setGuardianEthAddr(config: Configuration) {
+        // save config in status
+        this.status.config = config;
 
-//////////////////////////////////////////////////////////////////
-export async function canSendTx(state: State) {
-    if (!state.web3) throw new Error('Cannot send tx until web3 client is initialized.');
-    if (!state.pendingTx.txHash) return true;
+        // use con fig fields
+        this.senderOrbsAddress = `0x${config.NodeOrbsAddress}`;
+        if (!this.signer) {
+            // only once
+            Logger.log(`signer init with  ${this.status.config.SignerEndpoint}`);
+            this.signer = new Signer(this.status.config.SignerEndpoint);
+        }
 
-    console.log(`checking txHash: ${state.pendingTx.txHash}`);
-    const tx = await state.web3.eth.getTransaction(state.pendingTx.txHash);
-    if (tx == null || tx.blockNumber == null) {
-        Logger.log(`tx ${state.pendingTx.txHash} is still waiting for block.`);
-        return false; // still pending
+        try {
+            const curAddress = this.guardianAddress;
+            this.guardianAddress = _.map(_.filter(this.management.Payload.CurrentTopology, (data) => data.OrbsAddress === config.NodeOrbsAddress), 'EthAddress')[0];
+            if (curAddress !== this.guardianAddress)
+                Logger.log(`guardian address was set to ${this.guardianAddress}`);
+
+        } catch (err) {
+            Logger.log(`failed to find Guardian's address for node ${config.NodeOrbsAddress}`);
+            return;
+        }
     }
 
-    const receipt = await state.web3.eth.getTransactionReceipt(state.pendingTx.txHash);
-    if (receipt == null) {
-        Logger.log(`tx ${state.pendingTx.txHash} does not have receipt yet.`);
-        return false; // still pending
+    //////////////////////////////////////////////////////////////////
+    setLeader() {
+        const committee = this.management.Payload.CurrentCommittee;
+        const leaderIndex = this.currentLeaderIndex(committee);
+
+        // same leader dont change
+        if (leaderIndex === this.status.leaderIndex)
+            return this.status.isLeader;
+
+        // replace leader
+        const leader = committee[leaderIndex];
+        this.status.leaderIndex = leaderIndex;
+        this.status.leaderName = leader.Name;
+        this.status.leaderEthAddress = leader.EthAddress;
+
+        Logger.log(`leader changed: ${leader.Name} ${leader.EthAddress}`);
+
+        // M I the leader?
+        this.status.isLeader = leader.EthAddress === this.guardianAddress;
+
+        // send bi
+        let bi: any = {
+            type: 'leaderChanged',
+            nodeName: this.status.myNode.Name,
+            leaderIndex: leaderIndex,
+            leaderName: leader.Name,
+            leaderEthAddress: leader.EthAddress
+        }
+        // bi leader changed
+        biSend(this.status.config.BIUrl, bi);
+        return this.status.isLeader;
     }
 
-    Logger.log(`available receipt for tx ${state.pendingTx.txHash}: ${JSON.stringify(receipt)}`);
-
-    if (state.pendingTx.taskName === null)
-        throw Error(`missing task name for ${state.pendingTx.txHash}`);
-
-    if (state.pendingTx.taskInterval === null)
-        throw Error(`missing task interval for ${state.pendingTx.taskInterval}`);
-
-    scheduleNextRun(state, state.pendingTx.taskName, state.pendingTx.taskInterval);
-
-    state.pendingTx.txHash = null;
-    state.pendingTx.taskName = null;
-    state.pendingTx.taskInterval = null;
-
-    return true;
-}
-
-//////////////////////////////////////
-async function signAndSendTransaction(
-    state: State,
-    task: any,
-    encodedAbi: string,
-    contractAddress: string,
-    senderAddress: string,
-): Promise<string> {
-    const web3 = state.web3;
-    if (!web3) throw new Error('Cannot send tx until web3 client is initialized.');
-    if (!state.signer) throw new Error('Cannot send tx until signer is initialized.');
-
-    let nonce = await web3.eth.getTransactionCount(senderAddress, 'latest'); // ignore pending pool
-    Logger.log(`senderAddress: ${senderAddress} nonce: ${nonce}`);
-
-    const txObject: TxData = {
-        to: contractAddress,
-        gasPrice: toNumber(state.gasPrice || '0') * 1.1,  // TODO: fixme only for testing
-        gasLimit: GAS_LIMIT_HARD_LIMIT,
-        data: encodedAbi,
-        nonce: nonce,
-    };
-
-    Logger.log(`About to estimate gas for tx object: ${jsonStringifyComplexTypes(txObject)}.`);
-
-    const { rawTransaction, transactionHash } = await state.signer.sign(txObject, state.chainId);
-
-    // DEBUG
-    // setAccount(web3);
-    // const { rawTransaction, transactionHash } = debugSign(txObject);
-    //const { rawTransaction, transactionHash } = await debugSignAccount(txObject);
-
-    if (!rawTransaction || !transactionHash) {
-        throw new Error(`Could not sign tx object: ${jsonStringifyComplexTypes(txObject)}.`);
+    //////////////////////////////////////////////////////////////////
+    currentLeaderIndex(committee: Array<any>): any {
+        //return Math.floor(Date.now() / (TASK_TIME_DIVISION_MIN * 60000)) % committee.length;
+        return Math.floor(this.pacer.getEpochIndex() / TASK_TIME_DIVISION_MIN) % committee.length;
     }
-
-    state.pendingTx.txHash = transactionHash;
-    state.pendingTx.taskName = task.name;
-    state.pendingTx.taskInterval = task.taskInterval * 60000;
-
-    Logger.log(`taskName ${state.pendingTx.taskName}, taskInterval ${state.pendingTx.taskInterval}, txHash ${state.pendingTx.txHash} was added to pendingTx`);
-
-    return new Promise<string>((resolve, reject) => {
-        // normally this returns a promise that resolves on receipt, but we ignore this mechanism and have our own
-        web3.eth
-            .sendSignedTransaction(rawTransaction, (err) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve(transactionHash);
-
-                }
-            })
-            .catch(() => {
-                // do nothing (ignore the web3 promise)
-            });
-    });
-}
-
-//////////////////////////////////////
-async function sendContract(state: State, task: any, senderAddress: string) {
-    const network = task.network;
-    const method = task.method;
-    const params = task.params;
-    const abi = task.abi;
-    const addr = task.address
-
-    if (!abi) {
-        return console.error(`abi ${task.name} does not exist in folder`);
+    //////////////////////////////////////////////////////////////////
+    isTimeToRun(task: any) {
+        return this.status.epochIndex % task.intervalMinutes === 0;
     }
+    //////////////////////////////////////
+    //async function sendContract(state: Keeper, task: any, senderAddress: string) {
+    async sendNetworkContract(network: string, contract: any, method: string, params: any) {
 
-    if (!state.web3) throw new Error('web3 client is not initialized.');
+        if (!this.web3) throw new Error('web3 client is not initialized.');
 
-    const now = new Date();
-    const dt = now.toISOString();
-    let contract = new state.web3.eth.Contract(abi, addr);
+        const now = new Date();
+        const dt = now.toISOString();
+        const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
 
-    const tx = `${dt} ${network} ${contract.options.address} ${method} ${params}`;
-    let bi: any = {
-        type: 'sendTX',
-        network: network,
-        address: contract.options.address,
-        method: method,
-        params: params,
-        sender: state.validEthAddress,
-        // nodeName: state.status.myNode.Name,
-        success: true
-    }
+        let bi: any = {
+            type: 'sendTX',
+            nodeName: this.status.myNode.Name,
+            network: network,
+            sender: this.senderOrbsAddress,
+            contract: contract.options.address,
+            method: method,
+            params: params,
+            success: true
+        }
 
-    // encode call
-    let encoded: any;
-    if (params) {
-        encoded = contract.methods[method](params).encodeABI();
-    } else {
-        encoded = contract.methods[method]().encodeABI();
-    }
+        // encode call
+        let encoded: any;
+        if (params) {
+            encoded = contract.methods[method](params).encodeABI();
+        } else {
+            encoded = contract.methods[method]().encodeABI();
+        }
 
-    await signAndSendTransaction(state, task, encoded, contract.options.address, senderAddress).then(async (txhash) => {
-        //if (state.status) state.status?.successTX.push(tx);
-        bi.txhash = txhash;
-        // await biSend(config.BIUrl, bi);
-        Logger.log('SUCCESS:' + tx);
-
-    }).catch(async (err: Error) => {
-        bi.success = false;
-        bi.error = err.message;
-        // await biSend(config.BIUrl, bi);
-        Logger.error('signAndSendTransaction exception: ' + err.message);
-        Logger.log('FAIL:' + tx);
-        //state!.status!.failedTX.push(tx);
-    });
-}
-
-//////////////////////////////////////
-export async function execTask(state: State, task: any, senderAddress: string) {
-
-    Logger.log(`execute task: ${task.name}`);
-    if (!task.active) {
-        Logger.log(`task ${task.name} inactive`);
-        return;
-    }
-
-    // send bi
-    // let bi: any = {
-    //     type: 'execTask',
-    //     network: task.name,
-    //     minInterval: task.minInterval,
-    //     nodeName: state.status.myNode.Name,
-    // }
-    // await biSend(config.BIUrl, bi);
-
-    try {
-
-        if (!state.web3) {
-            Logger.error('web3 client is not initialized.');
+        if (process.env.NODE_ENV !== 'production') {
+            Logger.log(`NOT PRODUCTION - avoid sending ${tx}`);
             return;
         }
 
-        // update before loop execution
-        state.gasPrice = await state.web3.eth.getGasPrice();
+        const retry = 5;
+        let info = { retry: 0, errors: null };
+        let completedTxHash = await completeTX(retry, this.web3, this.signer, encoded, contract.options.address, this.senderOrbsAddress, info);
+        // how many attempts
+        bi.retry = info.retry;
 
-        await sendContract(state, task, senderAddress);
+        if (completedTxHash) {
+            this.status.successTX.push(tx);
+            bi.txhash = completedTxHash;
 
-    } catch (e) {
-        Logger.log(`Exception thrown from task: ${task.name}`);
-        Logger.error(e);
+            await biSend(this.status.config.BIUrl, bi);
+            Logger.log('SUCCESS:' + tx);
+
+        } else {
+            this.status.failTX.push(tx);
+            if (info.errors)
+                bi.errors = info.errors;
+
+            bi.success = false;
+            await biSend(this.status.config.BIUrl, bi);
+            throw new Error('signAndSendTransaction didnt complete: ' + tx);
+        };
+    }
+    //////////////////////////////////////
+    async execNetworkAdress(task: any, network: string, adrs: string) {
+        // resolve abi
+        const abi = this.abis[task.abi];
+        if (!abi) {
+            throw new Error(`abi ${task.abi} does not exist in folder`);
+        }
+
+        // resolev contract
+        if (!(adrs in this.contracts)) {
+            this.contracts[adrs] = new this.web3!.eth.Contract(abi, adrs, {
+                from: this.senderOrbsAddress // default from address
+                //gasPrice: this.gasPrice // default gas price in wei, 20 gwei in this case
+            });
+
+        }
+        const contract = this.contracts[adrs];
+        for (let send of task.send) {
+            // has params
+            if (send.params) {
+                for (let params of send.params) {
+                    await this.sendNetworkContract(network, contract, send.method, params);
+                }
+            } // no params
+            else {
+                await this.sendNetworkContract(network, contract, send.method, null);
+            }
+        }
+    }
+    //////////////////////////////////////
+    async execNetwork(task: any, network: string) {
+        for (let adrs of task.addresses) {
+            await this.execNetworkAdress(task, network, adrs);
+        }
+    }
+    //////////////////////////////////////
+    async execTask(task: any, errors: Array<string>) {
+        Logger.log(`${task.name} execute task`);
+        if (!task.active) {
+            Logger.log(`task ${task.name} inactive`);
+            return;
+        }
+
+        // send bi
+        let bi: any = {
+            type: 'execTask',
+            name: task.name,
+            nodeName: this.status.myNode.Name,
+            network: task.networks[0],
+            intervalMinutes: task.intervalMinutes,
+        }
+        await biSend(this.status.config.BIUrl, bi);
+
+        try {
+            //await sendContract(state, task, senderAddress);
+            for (let network of task.networks) {
+                await this.execNetwork(task, network);
+            }
+
+        } catch (e) {
+            const errText = `$task:{task.name} Exception: ${e}\n`;
+            errors.push(errText);
+            Logger.error(errText);
+        }
+        // next exec
+        var coeff = 1000 * 60 * 1;
+        let dt = new Date(Date.now() + task.intervalMinutes * 60 * 1000);
+        const rounded = new Date(Math.round(dt.getTime() / coeff) * coeff)
+        Logger.log(`${task.name} NEXT execution in ${task.intervalMinutes} epochs, after ${rounded.toISOString()}`);
+    }
+    //////////////////////////////////////
+    // tick should be more often then epoch index progress
+    // if epoch change - go forward
+    async onTick() {
+        this.status.tickCount += 1;
+        let curIndx = this.pacer.getEpochIndex()
+        // epoch hasnt change- DO NOTHING
+        if (this.status.epochIndex === curIndx) return;
+
+        this.status.epochIndex = curIndx;
+
+        try {
+            // update management
+            await readManagementStatus2(this.status.config.ManagementServiceEndpoint, this.status.config.NodeOrbsAddress, this);
+            // update management and config
+            this.setGuardianEthAddr(this.status.config);
+        } catch (e) {
+            Logger.error(`readManagementStatus2 error: ${e} continue with last call values`);
+            //register stale error if pollTime is > 10min
+            const deltaMinutes = Math.round((getCurrentClockTime() - this.status.ManagementLastPollTime) / 60)
+            if (deltaMinutes > 10)
+                this.status.error = `management data is stale over $}\n`;
+        }
+        if (this.management?.Payload?.CurrentCommittee?.length <= 0) {
+            console.error('commitee is not fetched yet');
+            return;
+        }
+
+
+        // leader  
+        const isLeader = this.setLeader() || alwaysLeader;
+        let taskExecuted: boolean = false;
+
+        if (!this.web3) {
+            this.status.error = 'web3 client is not initialized.';
+            Logger.error(this.status.error);
+            return;
+        }
+
+        let errors: Array<string> = [];
+
+        // tasks execution
+        for (const t of tasksObj.tasks) {
+            if (this.isTimeToRun(t) && isLeader) {
+                // first call - after that, task sets the next execution      
+                await this.execTask(t, errors);
+                taskExecuted = true;
+            }
+        }
+        if (taskExecuted) {
+            // balance
+            await this.getBalance(); /// update balance after tx send
+            // clear errors
+            this.status.error = "";
+            // add exceptions if thrown
+            for (let e of errors) {
+                this.status.error += e + '\n';
+            }
+        }
     }
 }
-
-// ////////////////////////////////////////////////

@@ -1,9 +1,10 @@
 import Web3 from 'web3';
-import { State } from '../model/state';
+import { Keeper } from '../keeper';
+//import { State } from '../model/state';
 
 const HTTP_TIMEOUT_SEC = 20;
 
-export async function initWeb3Client(ethereumEndpoint: string, state: State) {
+export async function initWeb3Client(ethereumEndpoint: string, state: Keeper) {
   // init web3
   state.web3 = new Web3(
     new Web3.providers.HttpProvider(ethereumEndpoint, {
