@@ -1,7 +1,7 @@
 //import * as Logger from '../logger';
 //import { State } from '../model/state';
 import { writeFileSync } from 'fs';
-import { ensureFileDirectoryExists, getCurrentVersion } from '../helpers'
+import { ensureFileDirectoryExists, getCurrentVersion, JsonResponse } from '../helpers'
 
 //import { weiToEth } from '../model/helpers';
 
@@ -12,7 +12,7 @@ import { ensureFileDirectoryExists, getCurrentVersion } from '../helpers'
 
 export function writeStatusToDisk(filePath: string, state: any) {
   const statusText = `tickCount: ${state.tickCount}, leaderName: ${state.leaderName}`
-  const status: any = {
+  const status: JsonResponse = {
     Status: statusText,
     Timestamp: new Date().toISOString(),
     Payload: {

@@ -334,6 +334,11 @@ export class Keeper {
             if (deltaMinutes > 10)
                 this.status.error = `management data is stale over $}\n`;
         }
+        if (this.management?.Payload?.CurrentCommittee?.length <= 0) {
+            console.error('commitee is not fetched yet');
+            return;
+        }
+
 
         // leader  
         const isLeader = this.setLeader() || alwaysLeader;
