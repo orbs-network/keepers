@@ -9,3 +9,4 @@ debug.json
 task_debug.json
 #tasks_orig.json
 yuval.sh
+deploy.sh
